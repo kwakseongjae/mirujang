@@ -45,5 +45,16 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>background-processing</string>
+	</array>
+	<key>UILaunchOptionsKey</key>
+	<dict>
+		<key>UIApplicationLaunchOptionsLocalNotificationKey</key>
+		<true/>
+	</dict>
+	<key>NSUserNotificationAlertStyle</key>
+	<string>alert</string>
 </dict>
 </plist>

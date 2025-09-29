@@ -7,8 +7,10 @@ class MirugangApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: '미루장',
       theme: ThemeData(
+        fontFamily: 'Pretendard',
         colorScheme: const ColorScheme.light(
           primary: Color(0xFF1976D2), // Material Blue
           secondary: Color(0xFF1976D2),
@@ -20,6 +22,7 @@ class MirugangApp extends StatelessWidget {
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
+        fontFamily: 'Pretendard',
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFF90CAF9), // 밝은 파란색
           secondary: Color(0xFF90CAF9),
