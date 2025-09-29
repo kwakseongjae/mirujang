@@ -1,19 +1,27 @@
 import 'package:flutter/material.dart';
 
 class MiruAlarmCard extends StatefulWidget {
+  final String title;
   final String content;
   final String deadline;
   final bool isEnabled;
+  final bool needsStrikethrough;
+  final bool requiresTimeModal; // 시간 설정 모달이 필요한지 여부
   final VoidCallback? onToggle;
   final VoidCallback? onDelete;
+  final VoidCallback? onTap; // 카드 클릭 이벤트
 
   const MiruAlarmCard({
     super.key,
+    required this.title,
     required this.content,
     required this.deadline,
     required this.isEnabled,
+    this.needsStrikethrough = false,
+    this.requiresTimeModal = false,
     this.onToggle,
     this.onDelete,
+    this.onTap,
   });
 
   @override
@@ -30,6 +38,7 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
 
   // 스와이프 관련 변수들
   double _dragOffset = 0.0;
+  bool _isDragging = false;
   static const double _deleteButtonWidth = 80.0; // 휴지통 컨테이너 너비
   static const double _threshold = 40.0; // 자동 완료 임계값
 
@@ -68,6 +77,20 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
   }
 
   @override
+  void didUpdateWidget(MiruAlarmCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // 위젯의 isEnabled 상태가 변경되면 토글 상태 동기화
+    if (oldWidget.isEnabled != widget.isEnabled) {
+      _isToggled = widget.isEnabled;
+      if (_isToggled) {
+        _toggleAnimationController.forward();
+      } else {
+        _toggleAnimationController.reverse();
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _toggleAnimationController.dispose();
     _springAnimationController.dispose();
@@ -75,6 +98,12 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
   }
 
   void _handleToggle() {
+    // 시간 설정 모달이 필요한 경우에는 토글 상태를 변경하지 않음
+    if (widget.requiresTimeModal) {
+      widget.onToggle?.call();
+      return;
+    }
+
     setState(() {
       _isToggled = !_isToggled;
     });
@@ -90,16 +119,24 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
 
   void _handleDragStart(DragStartDetails details) {
     // 드래그 시작 시 애니메이션 정지
+    _isDragging = false;
   }
 
   void _handleDragUpdate(DragUpdateDetails details) {
-    setState(() {
-      // 왼쪽으로 드래그할 때만 음수 값, 오른쪽으로는 0 이상으로 제한
-      _dragOffset = (_dragOffset + details.delta.dx).clamp(
-        -_deleteButtonWidth,
-        0.0,
-      );
-    });
+    // 드래그가 시작되었는지 확인 (임계값 이상 움직임)
+    if (!_isDragging && details.delta.dx.abs() > 5) {
+      _isDragging = true;
+    }
+
+    if (_isDragging) {
+      setState(() {
+        // 왼쪽으로 드래그할 때만 음수 값, 오른쪽으로는 0 이상으로 제한
+        _dragOffset = (_dragOffset + details.delta.dx).clamp(
+          -_deleteButtonWidth,
+          0.0,
+        );
+      });
+    }
   }
 
   void _handleDragEnd(DragEndDetails details) {
@@ -120,6 +157,9 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
       });
       _springAnimationController.reverse();
     }
+
+    // 드래그 상태 초기화
+    _isDragging = false;
   }
 
   void _handleDelete() {
@@ -175,6 +215,10 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
             return Transform.translate(
               offset: Offset(_dragOffset, 0),
               child: GestureDetector(
+                onTap: () {
+                  // 토글 버튼이 아닌 영역에서만 클릭 처리
+                  widget.onTap?.call();
+                },
                 onHorizontalDragStart: _handleDragStart,
                 onHorizontalDragUpdate: _handleDragUpdate,
                 onHorizontalDragEnd: _handleDragEnd,
@@ -200,17 +244,19 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 미루기 내용
+                            // 미루기 타이틀 (1줄로 truncate)
                             Text(
-                              widget.content,
+                              widget.title,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 color: Theme.of(context).colorScheme.onSurface,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
-                            // 마감일
+                            // 마감일 (가운데선 적용)
                             Text(
                               widget.deadline,
                               style: TextStyle(
@@ -218,6 +264,9 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
                                 color: Theme.of(
                                   context,
                                 ).colorScheme.onSurface.withOpacity(0.6),
+                                decoration: widget.needsStrikethrough
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
                               ),
                             ),
                           ],
@@ -226,6 +275,7 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
                       const SizedBox(width: 12),
                       // 우측: 커스텀 토글 버튼
                       GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: _handleToggle,
                         child: AnimatedBuilder(
                           animation: _toggleAnimation,
@@ -236,7 +286,7 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(15),
                                 color: _isToggled
-                                    ? const Color(0xFF87CEEB) // 하늘색 배경 (켜짐)
+                                    ? const Color(0xFFEAD49B) // 말풍선 색상 (켜짐)
                                     : const Color(
                                         0xFFD0D0D0,
                                       ), // 더 어두운 회색 배경 (꺼짐)
