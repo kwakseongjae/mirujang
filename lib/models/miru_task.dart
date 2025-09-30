@@ -98,8 +98,17 @@ class MiruTask {
   String _getTimeText() {
     if (notificationTime == null) return '알림 없음';
 
+    // 분 단위까지 동일한 기준으로 계산하여 화면 간 일관성 유지 (초 무시)
     final now = DateTime.now();
-    final difference = notificationTime!.difference(now);
+    final nowNormalized = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      now.hour,
+      now.minute,
+    );
+
+    final difference = notificationTime!.difference(nowNormalized);
 
     if (difference.isNegative) {
       return '알림 완료';
