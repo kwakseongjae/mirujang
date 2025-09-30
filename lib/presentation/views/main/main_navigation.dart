@@ -13,11 +13,18 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0; // 홈이 첫 번째이므로 0으로 설정
 
-  final List<Widget> _pages = [
-    const HomeView(), // index 0
-    const HistoryView(), // index 1
-    const SettingsView(), // index 2
-  ];
+  Widget _getPage(int index) {
+    switch (index) {
+      case 0:
+        return const HomeView();
+      case 1:
+        return const HistoryView(); // 매번 새로 생성
+      case 2:
+        return const SettingsView();
+      default:
+        return const HomeView();
+    }
+  }
 
   void _onTabTapped(int index) {
     setState(() {
@@ -28,7 +35,7 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _pages),
+      body: _getPage(_currentIndex),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).brightness == Brightness.dark
