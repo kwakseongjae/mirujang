@@ -26,6 +26,10 @@ class _HistoryViewState extends State<HistoryView>
   final ScrollController _scrollController = ScrollController();
   double _lastScrollOffset = 0.0;
 
+  // 다중 선택 관련 변수들
+  bool _isSelectionMode = false;
+  final Set<String> _selectedTaskIds = {};
+
   @override
   void initState() {
     super.initState();
@@ -82,7 +86,6 @@ class _HistoryViewState extends State<HistoryView>
       setState(() {
         _isLoading = false;
       });
-      print('Error loading completed tasks: $e');
     }
   }
 
@@ -90,34 +93,61 @@ class _HistoryViewState extends State<HistoryView>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          '히스토리',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-        ),
+        title: _isSelectionMode
+            ? Text(
+                '${_selectedTaskIds.length}개 선택됨',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              )
+            : const Text(
+                '히스토리',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+              ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        actions: [
-          // 개발용: 더미 히스토리 추가
-          IconButton(
-            onPressed: () async {
-              await _addDummyHistory();
-              _loadCompletedTasks(); // UI 새로고침
-            },
-            icon: const Icon(Icons.add),
-            tooltip: '더미 히스토리 추가',
-          ),
-          // 개발용: 완료된 작업 모두 삭제
-          IconButton(
-            onPressed: () async {
-              final storageService = await StorageService.getInstance();
-              await storageService.clearCompletedTasks();
-              _loadCompletedTasks(); // UI 새로고침
-            },
-            icon: const Icon(Icons.delete_sweep),
-            tooltip: '완료된 작업 모두 삭제',
-          ),
-        ],
+        leading: _isSelectionMode
+            ? IconButton(
+                onPressed: _exitSelectionMode,
+                icon: const Icon(Icons.close),
+              )
+            : null,
+        actions: _isSelectionMode
+            ? [
+                // 선택 모드일 때 삭제 버튼
+                if (_selectedTaskIds.isNotEmpty)
+                  TextButton(
+                    onPressed: _deleteSelectedTasks,
+                    child: const Text(
+                      '삭제',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ]
+            : [
+                // 일반 모드일 때 기존 버튼들
+                // 개발용: 더미 히스토리 추가
+                IconButton(
+                  onPressed: () async {
+                    await _addDummyHistory();
+                    _loadCompletedTasks(); // UI 새로고침
+                  },
+                  icon: const Icon(Icons.add),
+                  tooltip: '더미 히스토리 추가',
+                ),
+                // 선택 삭제 모드 진입
+                IconButton(
+                  onPressed: _enterSelectionMode,
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  tooltip: '선택 삭제',
+                ),
+              ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -188,6 +218,83 @@ class _HistoryViewState extends State<HistoryView>
     Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (context) => MiruDetailView(task: task)));
+  }
+
+  // 선택 모드 진입
+  void _enterSelectionMode() {
+    setState(() {
+      _isSelectionMode = true;
+      _selectedTaskIds.clear();
+    });
+  }
+
+  // 선택 모드 종료
+  void _exitSelectionMode() {
+    setState(() {
+      _isSelectionMode = false;
+      _selectedTaskIds.clear();
+    });
+  }
+
+  // 작업 선택 토글
+  void _toggleTaskSelection(String taskId) {
+    setState(() {
+      if (_selectedTaskIds.contains(taskId)) {
+        _selectedTaskIds.remove(taskId);
+      } else {
+        _selectedTaskIds.add(taskId);
+      }
+    });
+  }
+
+  // 선택된 작업들 삭제
+  void _deleteSelectedTasks() async {
+    if (_selectedTaskIds.isEmpty) return;
+
+    // 삭제 확인 다이얼로그 표시
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('선택한 히스토리를 삭제하시겠어요?', style: TextStyle(fontSize: 24)),
+        content: Text('${_selectedTaskIds.length}개의 히스토리가 삭제됩니다.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final storageService = await StorageService.getInstance();
+        final allTasks = await storageService.getTasks();
+
+        // 선택된 작업들 제거
+        allTasks.removeWhere((task) => _selectedTaskIds.contains(task.id));
+
+        // 저장
+        await storageService.saveTasks(allTasks);
+
+        // UI 업데이트
+        _exitSelectionMode();
+        _loadCompletedTasks();
+      } catch (e) {
+        // 선택된 작업 삭제 실패 시 사용자에게 알림
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('작업 삭제 중 오류가 발생했습니다.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // 스크롤 이벤트 처리
@@ -511,8 +618,13 @@ class _HistoryViewState extends State<HistoryView>
               title: task.title,
               content: task.memo,
               deadline: _formatRelativeTime(task.createdAt),
+              isSelectionMode: _isSelectionMode,
+              isSelected: _selectedTaskIds.contains(task.id),
               onTap: () {
                 _showTaskDetail(task);
+              },
+              onSelectionChanged: () {
+                _toggleTaskSelection(task.id);
               },
             ),
           );
