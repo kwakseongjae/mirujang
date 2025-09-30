@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/miru_task.dart';
+import '../utils/logger.dart';
 
 class StorageService {
   static const String _tasksKey = 'miru_tasks';
@@ -33,32 +34,51 @@ class StorageService {
       final List<dynamic> tasksJson = jsonDecode(tasksString);
       return tasksJson.map((json) => MiruTask.fromJson(json)).toList();
     } catch (e) {
-      print('Error loading tasks: $e');
+      Logger.error('Failed to load tasks from storage', error: e);
       return [];
     }
   }
 
   // 새로운 미루기 작업 추가
   Future<void> addTask(MiruTask task) async {
-    final tasks = await getTasks();
-    tasks.add(task);
-    await saveTasks(tasks);
+    try {
+      final tasks = await getTasks();
+      tasks.add(task);
+      await saveTasks(tasks);
+      Logger.userAction('Task created', data: {'taskId': task.id, 'title': task.title});
+    } catch (e) {
+      Logger.error('Failed to add task', error: e);
+      rethrow;
+    }
   }
 
   // 미루기 작업 삭제
   Future<void> deleteTask(String taskId) async {
-    final tasks = await getTasks();
-    tasks.removeWhere((task) => task.id == taskId);
-    await saveTasks(tasks);
+    try {
+      final tasks = await getTasks();
+      final taskToDelete = tasks.firstWhere((task) => task.id == taskId);
+      tasks.removeWhere((task) => task.id == taskId);
+      await saveTasks(tasks);
+      Logger.userAction('Task deleted', data: {'taskId': taskId, 'title': taskToDelete.title});
+    } catch (e) {
+      Logger.error('Failed to delete task', error: e);
+      rethrow;
+    }
   }
 
   // 미루기 작업 업데이트
   Future<void> updateTask(MiruTask updatedTask) async {
-    final tasks = await getTasks();
-    final index = tasks.indexWhere((task) => task.id == updatedTask.id);
-    if (index != -1) {
-      tasks[index] = updatedTask;
-      await saveTasks(tasks);
+    try {
+      final tasks = await getTasks();
+      final index = tasks.indexWhere((task) => task.id == updatedTask.id);
+      if (index != -1) {
+        tasks[index] = updatedTask;
+        await saveTasks(tasks);
+        Logger.userAction('Task updated', data: {'taskId': updatedTask.id, 'title': updatedTask.title});
+      }
+    } catch (e) {
+      Logger.error('Failed to update task', error: e);
+      rethrow;
     }
   }
 
