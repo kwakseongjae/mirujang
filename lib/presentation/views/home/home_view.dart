@@ -4,9 +4,11 @@ import 'package:flutter/cupertino.dart';
 import 'widgets/miru_alarm_card.dart';
 import '../create/create_view.dart';
 import '../detail/miru_detail_view.dart';
+import '../edit/miru_edit_view.dart';
 import '../../../models/miru_task.dart';
 import '../../../services/storage_service.dart';
 import '../../../services/notification_service.dart';
+import '../../../utils/logger.dart';
 
 // 하트 애니메이션 클래스
 class HeartAnimation {
@@ -110,6 +112,7 @@ class HomeView extends StatefulWidget {
 class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
   List<MiruTask> _tasks = [];
   bool _isLoading = true;
+  bool _isInitialLoad = true; // 초기 로드인지 확인하는 플래그
   late GlobalKey<AnimatedListState> _animatedListKey;
 
   // 하트 애니메이션 관련 변수들
@@ -215,6 +218,33 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
     await _loadTasks();
   }
 
+  // 미루기 편집 메서드
+  void _editTask(MiruTask task) async {
+    await Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            MiruEditView(task: task),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.0, 1.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOut;
+
+          var tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: curve));
+          var offsetAnimation = animation.drive(tween);
+
+          return SlideTransition(position: offsetAnimation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
+
+    // 편집 완료 후 목록 새로고침
+    await _loadTasks();
+  }
+
   // 하트 생성 메서드
   void _createHearts() {
     if (_tasks.isNotEmpty) return; // 미루기가 있을 때는 하트 생성 안함
@@ -310,18 +340,23 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
 
   // 알림 시간 상태 체크 및 UI 업데이트
   void _checkNotificationStatus() async {
+    // 초기 로드 중에는 상태 체크하지 않음
+    if (_isInitialLoad) return;
+
     bool needsUpdate = false;
     final storageService = await StorageService.getInstance();
+    final notificationService = NotificationService();
 
     for (var task in _tasks) {
       if (task.hasNotification &&
           task.notificationTime != null &&
-          !task.isCompleted) {
+          !task.isCompleted &&
+          task.isEnabled) {
         final now = DateTime.now();
-        if (task.notificationTime!.isBefore(now) && task.isEnabled) {
-          // 알림 시간이 지났고 아직 활성화 상태라면 완료 상태로 변경
+        if (task.notificationTime!.isBefore(now)) {
+          // 알림 시간이 지났으면 토글을 Off로 변경 (완료 처리하지 않음)
           task.isEnabled = false;
-          task.isCompleted = true;
+          await notificationService.cancelNotification(task.id);
           await storageService.updateTask(task);
           needsUpdate = true;
         }
@@ -344,16 +379,6 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       }
       if (a.status != MiruTaskStatus.noNotification &&
           b.status == MiruTaskStatus.noNotification) {
-        return 1;
-      }
-
-      // 2. 알림 완료 우선
-      if (a.status == MiruTaskStatus.notificationCompleted &&
-          b.status != MiruTaskStatus.notificationCompleted) {
-        return -1;
-      }
-      if (a.status != MiruTaskStatus.notificationCompleted &&
-          b.status == MiruTaskStatus.notificationCompleted) {
         return 1;
       }
 
@@ -395,19 +420,27 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       _tasks = incompleteTasks;
       _sortTasks();
 
-      // 새로 추가된 아이템들에 대해 애니메이션 추가
-      for (int i = previousTaskCount; i < _tasks.length; i++) {
-        _animatedListKey.currentState?.insertItem(i);
-      }
+      // 초기 로드 시에는 애니메이션 없이 바로 설정
+      if (_isInitialLoad) {
+        // 초기 로드 시에는 데이터 로드 완료 후 한 번에 UI 업데이트
+        setState(() {
+          _isLoading = false;
+          _isInitialLoad = false; // 초기 로드 완료
+        });
+      } else {
+        // 새로 추가된 아이템들에 대해 애니메이션 추가
+        for (int i = previousTaskCount; i < _tasks.length; i++) {
+          _animatedListKey.currentState?.insertItem(i);
+        }
 
-      setState(() {
-        _isLoading = false;
-      });
+        setState(() {
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      print('Error loading tasks: $e');
     }
   }
 
@@ -438,7 +471,8 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       // UI 즉시 업데이트 (텍스트, 이미지, 말풍선 반영)
       setState(() {});
     } catch (e) {
-      print('Error deleting task: $e');
+      // 작업 삭제 실패 시 사용자에게 알림
+      _showToastMessage('작업 삭제 중 오류가 발생했습니다.', Colors.red);
     }
   }
 
@@ -474,8 +508,17 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
 
       // 완료 토스트 메시지 표시
       _showToastMessage('작업이 완료되었습니다! 🎉', Colors.green);
+
+      // 사용자 액션 로깅
+      Logger.userAction(
+        'Task completed',
+        data: {
+          'taskId': task.id,
+          'title': task.title,
+          'completionTime': DateTime.now().toIso8601String(),
+        },
+      );
     } catch (e) {
-      print('Error completing task: $e');
       _showToastMessage('작업 완료 중 오류가 발생했습니다.', Colors.red);
     }
   }
@@ -488,7 +531,6 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       // 상태에 따른 토글 처리
       switch (task.status) {
         case MiruTaskStatus.noNotification:
-        case MiruTaskStatus.notificationCompleted:
           // 시간 설정 모달 표시 (토글 상태는 임시로 변경하지 않음)
           _showTimeSettingModal(task);
           return;
@@ -500,9 +542,10 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
           break;
 
         case MiruTaskStatus.notificationPaused:
-          // 토글 on (재개)
+          // 토글 on (재개) - 알림 설정이 활성화되어 있을 때만
           task.isEnabled = true;
-          if (task.notificationTime != null) {
+          if (task.notificationTime != null &&
+              notificationService.isNotificationEnabled) {
             await notificationService.scheduleNotification(task);
           }
           break;
@@ -513,8 +556,20 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
 
       // 리스트 새로고침으로 정렬 반영
       await _loadTasks();
+
+      // 사용자 액션 로깅
+      Logger.userAction(
+        'Task notification toggled',
+        data: {
+          'taskId': task.id,
+          'title': task.title,
+          'enabled': task.isEnabled,
+          'toggleTime': DateTime.now().toIso8601String(),
+        },
+      );
     } catch (e) {
-      print('Error toggling notification: $e');
+      // 알림 토글 실패 시 사용자에게 알림
+      _showToastMessage('알림 설정 변경 중 오류가 발생했습니다.', Colors.red);
     }
   }
 
@@ -537,7 +592,9 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
           await storageService.updateTask(task);
 
           final notificationService = NotificationService();
-          await notificationService.scheduleNotification(task);
+          if (notificationService.isNotificationEnabled) {
+            await notificationService.scheduleNotification(task);
+          }
 
           await _loadTasks();
         },
@@ -563,9 +620,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
             deadline: task.getTimeUntilNotification(),
             isEnabled: task.isEnabled,
             needsStrikethrough: task.needsStrikethrough,
-            requiresTimeModal:
-                task.status == MiruTaskStatus.noNotification ||
-                task.status == MiruTaskStatus.notificationCompleted,
+            requiresTimeModal: task.status == MiruTaskStatus.noNotification,
             onToggle: () {
               _toggleTaskNotification(task);
             },
@@ -574,6 +629,9 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
             },
             onComplete: () {
               _completeTask(task);
+            },
+            onEdit: () {
+              _editTask(task);
             },
             onTap: () {
               _showTaskDetail(task);
@@ -663,7 +721,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                       decoration: BoxDecoration(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? null // 다크모드에서는 그라데이션 사용
-                            : Colors.white, // 라이트모드에서는 하얀색 배경
+                            : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
                         gradient:
                             Theme.of(context).brightness == Brightness.dark
                             ? const LinearGradient(
@@ -698,7 +756,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                                 }
                               },
                               child: Image.asset(
-                                _tasks.isEmpty
+                                (_isLoading || _tasks.isEmpty)
                                     ? 'assets/images/miru_standing.png'
                                     : 'assets/images/miru_lazy.png',
                                 fit: BoxFit.contain,
@@ -1069,7 +1127,18 @@ class _TimeSettingModalState extends State<TimeSettingModal> {
             margin: const EdgeInsets.fromLTRB(16, 16, 16, 48),
             child: ElevatedButton(
               onPressed: () {
-                widget.onTimeSet(_selectedTime);
+                // 오늘 날짜와 선택된 시간을 결합하여 정확한 DateTime 생성
+                final now = DateTime.now();
+                final exactTime = DateTime(
+                  now.year,
+                  now.month,
+                  now.day,
+                  _selectedTime.hour,
+                  _selectedTime.minute,
+                  0, // 초는 0으로 설정
+                  0, // 밀리초는 0으로 설정
+                );
+                widget.onTimeSet(exactTime);
                 Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(

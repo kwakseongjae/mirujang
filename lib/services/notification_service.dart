@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/miru_task.dart';
+import '../utils/logger.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -11,8 +13,14 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _notifications =
       FlutterLocalNotificationsPlugin();
 
+  static const String _notificationEnabledKey = 'notification_enabled';
+  bool _isNotificationEnabled = true;
+
   // 알림 서비스 초기화
   Future<void> initialize() async {
+    // 먼저 저장된 알림 설정 로드
+    await _loadNotificationSettings();
+
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@drawable/ic_launcher');
 
@@ -35,11 +43,11 @@ class NotificationService {
     );
 
     // iOS 알림 권한 요청
-    await _requestPermissions();
+    await requestPermissions();
   }
 
   // 알림 권한 요청
-  Future<void> _requestPermissions() async {
+  Future<void> requestPermissions() async {
     await _notifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
@@ -55,8 +63,11 @@ class NotificationService {
 
   // 알림 탭 처리
   void _onNotificationTapped(NotificationResponse response) {
+    Logger.userAction(
+      'Notification tapped',
+      data: {'payload': response.payload},
+    );
     // 알림 탭 시 처리 로직 (필요시 구현)
-    print('알림 탭됨: ${response.payload}');
   }
 
   // 미루기 작업 알림 예약
@@ -64,6 +75,14 @@ class NotificationService {
     if (!task.hasNotification ||
         task.notificationTime == null ||
         !task.isEnabled) {
+      return;
+    }
+
+    // 알림 설정이 비활성화된 경우에만 차단
+    if (!_isNotificationEnabled) {
+      Logger.info(
+        'Notification scheduling skipped: global notification disabled',
+      );
       return;
     }
 
@@ -80,8 +99,8 @@ class NotificationService {
           'miru_notifications',
           '미루기 알림',
           channelDescription: '미루기 작업 알림 채널',
-          importance: Importance.high,
-          priority: Priority.high,
+          importance: Importance.max, // 최고 중요도
+          priority: Priority.max, // 최고 우선순위
           icon: '@drawable/ic_launcher',
           largeIcon: const DrawableResourceAndroidBitmap(
             '@drawable/ic_launcher',
@@ -92,6 +111,10 @@ class NotificationService {
           ledColor: const Color(0xFF1976D2),
           ledOnMs: 1000,
           ledOffMs: 500,
+          showWhen: true,
+          when: task.notificationTime!.millisecondsSinceEpoch,
+          usesChronometer: false,
+          timeoutAfter: 0, // 타임아웃 없음
         );
 
     final DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -111,16 +134,29 @@ class NotificationService {
       iOS: iosDetails,
     );
 
+    // 정확한 시간으로 알림 스케줄링
+    final scheduledTime = tz.TZDateTime.from(task.notificationTime!, tz.local);
+
     await _notifications.zonedSchedule(
       task.id.hashCode, // 고유한 ID
       notificationContent['title'], // 미루기 특유의 제목
       notificationContent['body'], // 미루기 특유의 내용
-      tz.TZDateTime.from(task.notificationTime!, tz.local),
+      scheduledTime,
       notificationDetails,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       payload: task.id,
+      matchDateTimeComponents: DateTimeComponents.time, // 정확한 시간 매칭
+    );
+
+    Logger.userAction(
+      'Notification scheduled',
+      data: {
+        'taskId': task.id,
+        'title': task.title,
+        'scheduledTime': task.notificationTime?.toIso8601String(),
+      },
     );
   }
 
@@ -164,5 +200,47 @@ class NotificationService {
   // 예약된 알림 목록 확인
   Future<List<dynamic>> getPendingNotifications() async {
     return await _notifications.pendingNotificationRequests();
+  }
+
+  // 알림 설정 로드
+  Future<void> _loadNotificationSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedValue = prefs.getBool(_notificationEnabledKey);
+    _isNotificationEnabled = savedValue ?? true; // 저장된 값이 없으면 기본값 true
+  }
+
+  // 알림 설정 저장
+  Future<void> _saveNotificationSettings() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_notificationEnabledKey, _isNotificationEnabled);
+      Logger.userAction(
+        'Notification settings saved',
+        data: {'enabled': _isNotificationEnabled},
+      );
+    } catch (e) {
+      Logger.error('Failed to save notification settings', error: e);
+    }
+  }
+
+  // 알림 활성화/비활성화
+  Future<void> setNotificationEnabled(bool enabled) async {
+    _isNotificationEnabled = enabled;
+    await _saveNotificationSettings();
+
+    if (!enabled) {
+      // 알림 비활성화 시 모든 예약된 알림 취소
+      await cancelAllNotifications();
+    }
+  }
+
+  // 알림 활성화 상태 확인
+  bool get isNotificationEnabled => _isNotificationEnabled;
+
+  // 알림 설정 리셋 (디버깅용)
+  Future<void> resetNotificationSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_notificationEnabledKey);
+    _isNotificationEnabled = true;
   }
 }

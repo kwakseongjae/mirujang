@@ -10,6 +10,7 @@ class MiruAlarmCard extends StatefulWidget {
   final VoidCallback? onToggle;
   final VoidCallback? onDelete;
   final VoidCallback? onComplete; // 완료 버튼 클릭 이벤트
+  final VoidCallback? onEdit; // 수정 버튼 클릭 이벤트
   final VoidCallback? onTap; // 카드 클릭 이벤트
 
   const MiruAlarmCard({
@@ -23,6 +24,7 @@ class MiruAlarmCard extends StatefulWidget {
     this.onToggle,
     this.onDelete,
     this.onComplete,
+    this.onEdit,
     this.onTap,
   });
 
@@ -180,7 +182,7 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.dark
                 ? const Color(0xFF1C1C1E)
-                : Colors.white,
+                : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -306,6 +308,282 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
     widget.onComplete?.call();
   }
 
+  void _showOptionsModal() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => _buildOptionsModal(),
+    );
+  }
+
+  Widget _buildOptionsModal() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? const Color(0xFF1E1E1E)
+            : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF3A3A3C).withOpacity(0.3)
+              : const Color(0xFFE0E0E0).withOpacity(0.8),
+          width: 0.5,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // 수정 옵션
+          _buildOptionItem(
+            icon: Icons.edit,
+            title: '수정',
+            onTap: () {
+              Navigator.of(context).pop();
+              widget.onEdit?.call();
+            },
+          ),
+          // 구분선
+          Container(
+            height: 0.5,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF3A3A3C).withOpacity(0.3)
+                : const Color(0xFFE0E0E0).withOpacity(0.8),
+          ),
+          // 완료 옵션
+          _buildOptionItem(
+            icon: Icons.check,
+            title: '완료',
+            textColor: Colors.green,
+            iconColor: Colors.white,
+            backgroundColor: Colors.green,
+            onTap: () {
+              Navigator.of(context).pop();
+              widget.onComplete?.call();
+            },
+          ),
+          // 구분선
+          Container(
+            height: 0.5,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF3A3A3C).withOpacity(0.3)
+                : const Color(0xFFE0E0E0).withOpacity(0.8),
+          ),
+          // 삭제 옵션 (빨간색)
+          _buildOptionItem(
+            icon: Icons.delete_outline,
+            title: '삭제',
+            textColor: Colors.red,
+            iconColor: Colors.white,
+            backgroundColor: Colors.red,
+            onTap: () {
+              Navigator.of(context).pop();
+              _showDeleteConfirmationModal();
+            },
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOptionItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    Color? textColor,
+    Color? iconColor,
+    Color? backgroundColor,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Icon(
+                    icon,
+                    size: 20,
+                    color:
+                        iconColor ??
+                        (Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w500,
+                  color:
+                      textColor ??
+                      (Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showDeleteConfirmationModal() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => _buildDeleteConfirmationDialog(),
+    );
+  }
+
+  Widget _buildDeleteConfirmationDialog() {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1C1C1E)
+              : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 상단 텍스트 영역
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+              child: Column(
+                children: [
+                  Text(
+                    '미루기를 삭제하시겠어요?',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '삭제된 미루기는 복구할 수 없습니다.\n정말 삭제하시겠어요?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 16,
+                      height: 1.4,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white.withOpacity(0.7)
+                          : Colors.black.withOpacity(0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 하단 버튼 영역
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              child: Row(
+                children: [
+                  // 취소 버튼 (좌측)
+                  Expanded(
+                    child: Container(
+                      height: 44,
+                      margin: const EdgeInsets.only(right: 4),
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF2C2C2E)
+                              : const Color(0xFFF2F2F7),
+                          foregroundColor:
+                              Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black,
+                          elevation: 0,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          '취소',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // 삭제 버튼 (우측)
+                  Expanded(
+                    child: Container(
+                      height: 44,
+                      margin: const EdgeInsets.only(left: 4),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(true);
+                          widget.onDelete?.call();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          '삭제',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _resetSwipeState() {
     setState(() {
       _dragOffset = 0.0;
@@ -417,7 +695,7 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
                     decoration: BoxDecoration(
                       color: Theme.of(context).brightness == Brightness.dark
                           ? const Color(0xFF1E1E1E)
-                          : Colors.white,
+                          : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: Theme.of(context).brightness == Brightness.dark
@@ -468,62 +746,89 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
                           ),
                         ),
                         const SizedBox(width: 12),
-                        // 우측: 커스텀 토글 버튼
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: _handleToggle,
-                          child: AnimatedBuilder(
-                            animation: _toggleAnimation,
-                            builder: (context, child) {
-                              return Container(
-                                width: 50,
-                                height: 30,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(15),
-                                  color: _isToggled
-                                      ? const Color(0xFFEAD49B) // 말풍선 색상 (켜짐)
-                                      : const Color(
-                                          0xFFD0D0D0,
-                                        ), // 더 어두운 회색 배경 (꺼짐)
-                                ),
-                                child: Stack(
-                                  children: [
-                                    // 토글 원
-                                    AnimatedPositioned(
-                                      duration: const Duration(
-                                        milliseconds: 200,
-                                      ),
-                                      curve: Curves.easeInOut,
-                                      left: _isToggled ? 22 : 2,
-                                      top: 2,
-                                      child: Container(
-                                        width: 26,
-                                        height: 26,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: _isToggled
-                                              ? Colors
-                                                    .white // 하얀색 원 (켜짐)
-                                              : const Color(
-                                                  0xFFF5F5F5,
-                                                ), // 밝은 회색 원 (꺼짐)
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(
-                                                0.1,
-                                              ),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                        // 우측: 토글 버튼과 더보기 버튼
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // 커스텀 토글 버튼
+                            GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: _handleToggle,
+                              child: AnimatedBuilder(
+                                animation: _toggleAnimation,
+                                builder: (context, child) {
+                                  return Container(
+                                    width: 50,
+                                    height: 30,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(15),
+                                      color: _isToggled
+                                          ? const Color(
+                                              0xFFEAD49B,
+                                            ) // 말풍선 색상 (켜짐)
+                                          : const Color(
+                                              0xFFD0D0D0,
+                                            ), // 더 어두운 회색 배경 (꺼짐)
                                     ),
-                                  ],
+                                    child: Stack(
+                                      children: [
+                                        // 토글 원
+                                        AnimatedPositioned(
+                                          duration: const Duration(
+                                            milliseconds: 200,
+                                          ),
+                                          curve: Curves.easeInOut,
+                                          left: _isToggled ? 22 : 2,
+                                          top: 2,
+                                          child: Container(
+                                            width: 26,
+                                            height: 26,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: _isToggled
+                                                  ? Colors
+                                                        .white // 하얀색 원 (켜짐)
+                                                  : const Color(
+                                                      0xFFF5F5F5,
+                                                    ), // 밝은 회색 원 (꺼짐)
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.1),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            // 더보기 버튼 (세로 점 세개)
+                            GestureDetector(
+                              onTap: _showOptionsModal,
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: Center(
+                                  child: Icon(
+                                    Icons.more_vert,
+                                    size: 20,
+                                    color:
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
                                 ),
-                              );
-                            },
-                          ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
