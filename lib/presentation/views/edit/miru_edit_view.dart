@@ -240,34 +240,48 @@ class _MiruEditViewState extends State<MiruEditView>
     final now = DateTime.now();
 
     // 현재 시간과 설정한 시간이 같은 분인지 확인 (시, 분만 비교)
-    if (now.hour == _selectedTime!.hour &&
-        now.minute == _selectedTime!.minute) {
+    final isSameTime =
+        now.hour == _selectedTime!.hour && now.minute == _selectedTime!.minute;
+
+    // 현재 시각과 정확히 같을 때만 "1분 이내에 알림을 받아요" 표시
+    if (isSameTime) {
       return '1분 이내에 알림을 받아요';
     }
 
-    // 시간 차이 계산
-    final difference = _selectedTime!.difference(now);
+    // 현재 시간을 분 단위로 정규화 (초를 0으로)
+    final currentTimeNormalized = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      now.hour,
+      now.minute,
+    );
+
+    // 설정한 시간
+    final selectedDateTime = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      _selectedTime!.hour,
+      _selectedTime!.minute,
+    );
+
+    // 설정한 시간이 현재 시간보다 이전이면 다음날로 설정
+    final notificationDateTime =
+        selectedDateTime.isBefore(currentTimeNormalized)
+        ? selectedDateTime.add(const Duration(days: 1))
+        : selectedDateTime;
+
+    final difference = notificationDateTime.difference(currentTimeNormalized);
     final totalMinutes = difference.inMinutes;
-
-    if (totalMinutes <= 0) {
-      // 과거 시간인 경우 다음날로 계산
-      final nextDayTime = _selectedTime!.add(const Duration(days: 1));
-      final nextDayDifference = nextDayTime.difference(now);
-      final nextDayMinutes = nextDayDifference.inMinutes;
-
-      final hours = nextDayMinutes ~/ 60;
-      final minutes = nextDayMinutes % 60;
-
-      if (hours == 0) {
-        return '$minutes분 후에 알림을 받아요';
-      }
-      return '$hours시간 $minutes분 후에 알림을 받아요';
-    }
-
     final hours = totalMinutes ~/ 60;
     final minutes = totalMinutes % 60;
 
+    // 0시간일 때는 시간 정보 제외
     if (hours == 0) {
+      if (minutes == 0) {
+        return '1분 이내에 알림을 받아요';
+      }
       return '$minutes분 후에 알림을 받아요';
     }
 
@@ -305,6 +319,7 @@ class _MiruEditViewState extends State<MiruEditView>
     }
 
     try {
+      // 알림 시간 계산
       DateTime? notificationTime;
       if (_enableNotification && _selectedTime != null) {
         final now = DateTime.now();
@@ -317,9 +332,13 @@ class _MiruEditViewState extends State<MiruEditView>
         );
 
         // 현재 시간과 같으면 1분 후로 설정
-        if (now.hour == _selectedTime!.hour &&
-            now.minute == _selectedTime!.minute) {
-          notificationTime = selectedDateTime.add(const Duration(minutes: 1));
+        final isSameTime =
+            now.hour == _selectedTime!.hour &&
+            now.minute == _selectedTime!.minute;
+        if (isSameTime) {
+          notificationTime = now.add(const Duration(minutes: 1));
+        } else if (selectedDateTime.isBefore(now)) {
+          notificationTime = selectedDateTime.add(const Duration(days: 1));
         } else {
           notificationTime = selectedDateTime;
         }
@@ -601,6 +620,8 @@ class _MiruEditViewState extends State<MiruEditView>
                               onTap: () {
                                 setState(() {
                                   _enableNotification = true;
+                                  // 알림 받기 선택 시 현재 시간으로 설정
+                                  _selectedTime = DateTime.now();
                                 });
                               },
                               child: Container(
