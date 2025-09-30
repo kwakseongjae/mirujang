@@ -2,7 +2,6 @@ enum MiruTaskStatus {
   noNotification, // 1. 알림 없음
   notificationScheduled, // 2. 알림 있음 - 시간 설정 O
   notificationPaused, // 3. 알림 있음 - 시간 설정 O - 알림 off 상태
-  notificationCompleted, // 4. 알림 있음 - 시간 설정 - 알림 받음(알림 완료)R
 }
 
 class MiruTask {
@@ -63,10 +62,7 @@ class MiruTask {
       return MiruTaskStatus.noNotification;
     }
 
-    // 4. 알림 받음(알림 완료) - isCompleted가 true이고 isEnabled가 false
-    if (isCompleted && !isEnabled) {
-      return MiruTaskStatus.notificationCompleted;
-    }
+    // 완료된 작업은 히스토리로 이동하므로 여기서는 처리하지 않음
 
     // 2. 알림 있음 - 시간 설정 O - isEnabled가 true (재설정된 경우도 포함)
     if (isEnabled) {
@@ -88,9 +84,6 @@ class MiruTask {
 
       case MiruTaskStatus.notificationPaused:
         return _getTimeText();
-
-      case MiruTaskStatus.notificationCompleted:
-        return '알림 완료';
     }
   }
 
@@ -111,6 +104,7 @@ class MiruTask {
     final difference = notificationTime!.difference(nowNormalized);
 
     if (difference.isNegative) {
+      // 알림 시간이 지났으면 "알림 완료" 표시
       return '알림 완료';
     }
 
@@ -130,6 +124,15 @@ class MiruTask {
 
   // 가운데선이 필요한지 확인하는 메서드 (시간 정보에만 적용)
   bool get needsStrikethrough {
+    // 알림 시간이 지났으면 취소선 없음 (알림 완료 상태)
+    if (hasNotification && notificationTime != null && !isEnabled) {
+      final now = DateTime.now();
+      if (notificationTime!.isBefore(now)) {
+        return false; // 알림 완료 - 취소선 없음
+      }
+    }
+
+    // 사용자가 수동으로 토글을 Off한 경우에만 취소선 표시
     return status == MiruTaskStatus.notificationPaused;
   }
 
