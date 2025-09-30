@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'presentation/views/home/home_view.dart';
+import 'presentation/views/main/main_navigation.dart';
 
 class MirugangApp extends StatelessWidget {
   const MirugangApp({super.key});
@@ -34,7 +34,7 @@ class MirugangApp extends StatelessWidget {
         useMaterial3: true,
       ),
       themeMode: ThemeMode.system, // 시스템 설정을 따라감
-      home: const HomeView(),
+      home: const MainNavigation(),
     );
   }
 }

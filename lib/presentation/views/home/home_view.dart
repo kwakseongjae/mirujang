@@ -190,9 +190,26 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
 
   // 미루기 상세 보기 메서드
   void _showTaskDetail(MiruTask task) async {
-    final result = await Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (context) => MiruDetailView(task: task)));
+    final result = await Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            MiruDetailView(task: task),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          const begin = Offset(0.0, 1.0);
+          const end = Offset.zero;
+          const curve = Curves.easeInOut;
+
+          var tween = Tween(
+            begin: begin,
+            end: end,
+          ).chain(CurveTween(curve: curve));
+          var offsetAnimation = animation.drive(tween);
+
+          return SlideTransition(position: offsetAnimation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+      ),
+    );
 
     // 편집 완료 후 목록 새로고침
     if (result == true) {
@@ -219,7 +236,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
 
       final heart = HeartAnimation(
         startX: (screenWidth * 0.3) + (random % (screenWidth * 0.4).toInt()),
-        startY: screenHeight * 0.4,
+        startY: screenHeight * 0.35,
         endX: (screenWidth * 0.2) + (random % (screenWidth * 0.6).toInt()),
         endY: -100,
         controller: controller,
@@ -262,7 +279,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
 
       final zzzIcon = ZzzAnimation(
         startX: (screenWidth * 0.3) + (random % (screenWidth * 0.4).toInt()),
-        startY: screenHeight * 0.4,
+        startY: screenHeight * 0.35,
         endX: (screenWidth * 0.2) + (random % (screenWidth * 0.6).toInt()),
         endY: -100,
         controller: controller,
@@ -526,7 +543,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
-    final imageHeight = screenHeight / 3;
+    final imageHeight = screenHeight / 3.5;
 
     return Stack(
       children: [

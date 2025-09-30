@@ -17,13 +17,13 @@ class _MiruEditViewState extends State<MiruEditView>
     with TickerProviderStateMixin {
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _memoController = TextEditingController();
-  DateTime _selectedTime = DateTime.now();
+  DateTime? _selectedTime;
   bool _enableNotification = false;
 
   // 수정사항 감지를 위한 원본 값들
   late String _originalTitle;
   late String _originalMemo;
-  late DateTime _originalTime;
+  DateTime? _originalTime;
   late bool _originalNotification;
 
   // 토스트 메시지 관련
@@ -40,13 +40,13 @@ class _MiruEditViewState extends State<MiruEditView>
     // 원본 값 저장
     _originalTitle = widget.task.title;
     _originalMemo = widget.task.memo;
-    _originalTime = widget.task.notificationTime ?? DateTime.now();
+    _originalTime = widget.task.notificationTime;
     _originalNotification = widget.task.hasNotification;
 
     // 초기 값 설정
     _titleController.text = widget.task.title;
     _memoController.text = widget.task.memo;
-    _selectedTime = widget.task.notificationTime ?? DateTime.now();
+    _selectedTime = widget.task.notificationTime;
     _enableNotification = widget.task.hasNotification;
 
     // 토스트 애니메이션 컨트롤러 초기화
@@ -69,15 +69,31 @@ class _MiruEditViewState extends State<MiruEditView>
 
   // 수정사항이 있는지 확인
   bool _hasChanges() {
+    // 시간 비교를 위한 null 안전 처리
+    bool timeChanged = false;
+    if (_originalTime == null && _selectedTime == null) {
+      timeChanged = false;
+    } else if (_originalTime == null || _selectedTime == null) {
+      timeChanged = true;
+    } else {
+      // 시간을 분 단위로 비교 (초 단위 차이는 무시)
+      timeChanged =
+          _originalTime!.hour != _selectedTime!.hour ||
+          _originalTime!.minute != _selectedTime!.minute;
+    }
+
     return _titleController.text.trim() != _originalTitle ||
         _memoController.text.trim() != _originalMemo ||
-        _selectedTime != _originalTime ||
+        timeChanged ||
         _enableNotification != _originalNotification;
   }
 
   // 뒤로가기 시 수정사항 확인
   Future<bool> _onWillPop() async {
-    if (!_hasChanges()) {
+    final hasChanges = _hasChanges();
+    print('_hasChanges(): $hasChanges'); // 디버깅용 로그
+
+    if (!hasChanges) {
       return true;
     }
 
@@ -217,20 +233,25 @@ class _MiruEditViewState extends State<MiruEditView>
   }
 
   String _getNotificationTimeText() {
+    if (_selectedTime == null) {
+      return '알림 시간 미설정';
+    }
+
     final now = DateTime.now();
 
     // 현재 시간과 설정한 시간이 같은 분인지 확인 (시, 분만 비교)
-    if (now.hour == _selectedTime.hour && now.minute == _selectedTime.minute) {
+    if (now.hour == _selectedTime!.hour &&
+        now.minute == _selectedTime!.minute) {
       return '1분 이내에 알림을 받아요';
     }
 
     // 시간 차이 계산
-    final difference = _selectedTime.difference(now);
+    final difference = _selectedTime!.difference(now);
     final totalMinutes = difference.inMinutes;
 
     if (totalMinutes <= 0) {
       // 과거 시간인 경우 다음날로 계산
-      final nextDayTime = _selectedTime.add(const Duration(days: 1));
+      final nextDayTime = _selectedTime!.add(const Duration(days: 1));
       final nextDayDifference = nextDayTime.difference(now);
       final nextDayMinutes = nextDayDifference.inMinutes;
 
@@ -285,19 +306,19 @@ class _MiruEditViewState extends State<MiruEditView>
 
     try {
       DateTime? notificationTime;
-      if (_enableNotification) {
+      if (_enableNotification && _selectedTime != null) {
         final now = DateTime.now();
         final selectedDateTime = DateTime(
           now.year,
           now.month,
           now.day,
-          _selectedTime.hour,
-          _selectedTime.minute,
+          _selectedTime!.hour,
+          _selectedTime!.minute,
         );
 
         // 현재 시간과 같으면 1분 후로 설정
-        if (now.hour == _selectedTime.hour &&
-            now.minute == _selectedTime.minute) {
+        if (now.hour == _selectedTime!.hour &&
+            now.minute == _selectedTime!.minute) {
           notificationTime = selectedDateTime.add(const Duration(minutes: 1));
         } else {
           notificationTime = selectedDateTime;
@@ -353,7 +374,8 @@ class _MiruEditViewState extends State<MiruEditView>
               leading: IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () async {
-                  if (await _onWillPop()) {
+                  final shouldPop = await _onWillPop();
+                  if (shouldPop && mounted) {
                     Navigator.of(context).pop();
                   }
                 },
