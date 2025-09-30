@@ -83,7 +83,9 @@ class NotificationService {
           importance: Importance.high,
           priority: Priority.high,
           icon: '@drawable/ic_launcher',
-          largeIcon: const DrawableResourceAndroidBitmap('@drawable/ic_launcher'),
+          largeIcon: const DrawableResourceAndroidBitmap(
+            '@drawable/ic_launcher',
+          ),
           fullScreenIntent: true,
           category: AndroidNotificationCategory.alarm,
           color: const Color(0xFF1976D2), // 앱 테마 색상
@@ -126,13 +128,15 @@ class NotificationService {
   Map<String, String> _generateNotificationContent(MiruTask task) {
     final title = task.title;
     final memo = task.memo;
-    
+
     // 제목이 20자 이상이면 줄임
-    final shortTitle = title.length > 20 ? '${title.substring(0, 20)}...' : title;
-    
+    final shortTitle = title.length > 20
+        ? '${title.substring(0, 20)}...'
+        : title;
+
     // 미루기 알림장 특유의 제목 생성
     final notificationTitle = '미루기 시간이에요! 📝';
-    
+
     // 미루기 알림장 특유의 내용 생성
     String notificationBody;
     if (memo.isNotEmpty) {
@@ -143,11 +147,8 @@ class NotificationService {
       // 메모가 없는 경우
       notificationBody = '"$shortTitle"을(를) 미루고 계셨죠?\n이제 처리할 시간이에요! 💪';
     }
-    
-    return {
-      'title': notificationTitle,
-      'body': notificationBody,
-    };
+
+    return {'title': notificationTitle, 'body': notificationBody};
   }
 
   // 알림 취소
