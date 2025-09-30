@@ -190,7 +190,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
 
   // 미루기 상세 보기 메서드
   void _showTaskDetail(MiruTask task) async {
-    final result = await Navigator.of(context).push(
+    await Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             MiruDetailView(task: task),
@@ -211,10 +211,8 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       ),
     );
 
-    // 편집 완료 후 목록 새로고침
-    if (result == true) {
-      await _loadTasks();
-    }
+    // 상세 페이지에서 돌아오면 항상 최신 데이터를 반영
+    await _loadTasks();
   }
 
   // 하트 생성 메서드
@@ -383,13 +381,18 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
   Future<void> _loadTasks() async {
     try {
       final storageService = await StorageService.getInstance();
-      final tasks = await storageService.getTasks();
+      final allTasks = await storageService.getTasks();
+
+      // 완료되지 않은 작업만 필터링
+      final incompleteTasks = allTasks
+          .where((task) => !task.isCompleted)
+          .toList();
 
       // 이전 작업 수 저장
       final previousTaskCount = _tasks.length;
 
       // 정렬 적용
-      _tasks = tasks;
+      _tasks = incompleteTasks;
       _sortTasks();
 
       // 새로 추가된 아이템들에 대해 애니메이션 추가
@@ -436,6 +439,44 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       setState(() {});
     } catch (e) {
       print('Error deleting task: $e');
+    }
+  }
+
+  Future<void> _completeTask(MiruTask task) async {
+    try {
+      // 완료할 아이템의 인덱스 찾기
+      final index = _tasks.indexWhere((t) => t.id == task.id);
+      if (index == -1) return;
+
+      // 작업 완료 처리
+      task.isCompleted = true;
+      task.isEnabled = false;
+
+      // 알림 취소
+      final notificationService = NotificationService();
+      await notificationService.cancelNotification(task.id);
+
+      // 저장소에 업데이트
+      final storageService = await StorageService.getInstance();
+      await storageService.updateTask(task);
+
+      // 애니메이션과 함께 리스트에서 제거
+      final completedTask = _tasks.removeAt(index);
+      _animatedListKey.currentState?.removeItem(
+        index,
+        (context, animation) =>
+            _buildAnimatedItem(completedTask, animation, index),
+        duration: const Duration(milliseconds: 300),
+      );
+
+      // UI 즉시 업데이트
+      setState(() {});
+
+      // 완료 토스트 메시지 표시
+      _showToastMessage('작업이 완료되었습니다! 🎉', Colors.green);
+    } catch (e) {
+      print('Error completing task: $e');
+      _showToastMessage('작업 완료 중 오류가 발생했습니다.', Colors.red);
     }
   }
 
@@ -514,7 +555,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       child: FadeTransition(
         opacity: animation,
         child: Padding(
-          padding: EdgeInsets.only(bottom: index < _tasks.length - 1 ? 12 : 0),
+          padding: const EdgeInsets.only(bottom: 12),
           child: MiruAlarmCard(
             key: ValueKey(task.id),
             title: task.title,
@@ -530,6 +571,9 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
             },
             onDelete: () {
               _deleteTask(task.id);
+            },
+            onComplete: () {
+              _completeTask(task);
             },
             onTap: () {
               _showTaskDetail(task);
@@ -765,8 +809,9 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                                   : AnimatedList(
                                       key: _animatedListKey,
                                       padding: const EdgeInsets.only(
-                                        bottom: 120,
-                                      ), // 플로팅 버튼을 위한 여백
+                                        bottom:
+                                            132, // 플로팅 버튼을 위한 여백 + 마지막 아이템 여백
+                                      ),
                                       initialItemCount: _tasks.length,
                                       itemBuilder: (context, index, animation) {
                                         final task = _tasks[index];
