@@ -45,51 +45,53 @@ class _MiruDetailViewState extends State<MiruDetailView> {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () async {
-              final result = await Navigator.of(context).push(
-                PageRouteBuilder(
-                  pageBuilder: (context, animation, secondaryAnimation) =>
-                      MiruEditView(task: _currentTask),
-                  transitionsBuilder:
-                      (context, animation, secondaryAnimation, child) {
-                        const begin = Offset(0.0, 1.0);
-                        const end = Offset.zero;
-                        const curve = Curves.easeInOut;
+          // 완료된 작업이 아닐 때만 편집 버튼 표시
+          if (!_currentTask.isCompleted)
+            TextButton(
+              onPressed: () async {
+                final result = await Navigator.of(context).push(
+                  PageRouteBuilder(
+                    pageBuilder: (context, animation, secondaryAnimation) =>
+                        MiruEditView(task: _currentTask),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                          const begin = Offset(0.0, 1.0);
+                          const end = Offset.zero;
+                          const curve = Curves.easeInOut;
 
-                        var tween = Tween(
-                          begin: begin,
-                          end: end,
-                        ).chain(CurveTween(curve: curve));
+                          var tween = Tween(
+                            begin: begin,
+                            end: end,
+                          ).chain(CurveTween(curve: curve));
 
-                        return SlideTransition(
-                          position: animation.drive(tween),
-                          child: child,
-                        );
-                      },
-                  transitionDuration: const Duration(milliseconds: 300),
+                          return SlideTransition(
+                            position: animation.drive(tween),
+                            child: child,
+                          );
+                        },
+                    transitionDuration: const Duration(milliseconds: 300),
+                  ),
+                );
+
+                // 편집 완료 후 현재 페이지 새로고침
+                if (result != null) {
+                  setState(() {
+                    // 편집된 내용을 현재 페이지에 반영
+                    _currentTask = result; // 업데이트된 task 사용
+                  });
+                }
+              },
+              child: Text(
+                '편집',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black,
                 ),
-              );
-
-              // 편집 완료 후 현재 페이지 새로고침
-              if (result != null) {
-                setState(() {
-                  // 편집된 내용을 현재 페이지에 반영
-                  _currentTask = result; // 업데이트된 task 사용
-                });
-              }
-            },
-            child: Text(
-              '편집',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black,
               ),
             ),
-          ),
         ],
       ),
       body: SafeArea(
@@ -118,8 +120,10 @@ class _MiruDetailViewState extends State<MiruDetailView> {
                 const SizedBox(height: 24),
               ],
 
-              // 알림 설정 섹션
-              _buildNotificationSection(context),
+              // 알림 설정 섹션 (완료된 작업이 아닐 때만 표시)
+              if (!_currentTask.isCompleted) ...[
+                _buildNotificationSection(context),
+              ],
             ],
           ),
         ),
@@ -259,8 +263,9 @@ class _MiruDetailViewState extends State<MiruDetailView> {
                 ],
               ),
 
-              // 알림 시간 정보
-              if (_currentTask.hasNotification &&
+              // 알림 시간 정보 (완료된 작업이 아닐 때만 표시)
+              if (!_currentTask.isCompleted &&
+                  _currentTask.hasNotification &&
                   _currentTask.notificationTime != null) ...[
                 const SizedBox(height: 12),
                 Text(
