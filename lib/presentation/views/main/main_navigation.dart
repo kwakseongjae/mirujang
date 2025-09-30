@@ -124,10 +124,10 @@ class _MainNavigationState extends State<MainNavigation> {
                 color: isSelected
                     ? Theme.of(context).brightness == Brightness.dark
                           ? Colors.white
-                          : Theme.of(context).primaryColor
+                          : const Color(0xFF2D3748) // 라이트모드 선택시: 짙은 회색
                     : Theme.of(context).brightness == Brightness.dark
                     ? Colors.grey.shade600
-                    : Colors.black.withOpacity(0.4),
+                    : Colors.black.withOpacity(0.3), // 라이트모드 미선택시: 더 연한 회색으로
               ),
               const SizedBox(height: 2),
               Text(
@@ -138,10 +138,10 @@ class _MainNavigationState extends State<MainNavigation> {
                   color: isSelected
                       ? Theme.of(context).brightness == Brightness.dark
                             ? Colors.white
-                            : Theme.of(context).primaryColor
+                            : const Color(0xFF2D3748) // 라이트모드 선택시: 짙은 회색
                       : Theme.of(context).brightness == Brightness.dark
                       ? Colors.grey.shade600
-                      : Colors.black.withOpacity(0.4),
+                      : Colors.black.withOpacity(0.3), // 라이트모드 미선택시: 더 연한 회색으로
                 ),
               ),
             ],

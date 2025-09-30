@@ -176,7 +176,7 @@ class _MiruDetailViewState extends State<MiruDetailView> {
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.dark
                 ? const Color(0xFF2C2C2E)
-                : Colors.white,
+                : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: Theme.of(context).brightness == Brightness.dark
@@ -225,7 +225,7 @@ class _MiruDetailViewState extends State<MiruDetailView> {
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.dark
                 ? const Color(0xFF2C2C2E)
-                : Colors.white,
+                : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: Theme.of(context).brightness == Brightness.dark

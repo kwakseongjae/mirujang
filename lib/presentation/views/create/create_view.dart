@@ -179,7 +179,6 @@ class _CreateViewState extends State<CreateView> with TickerProviderStateMixin {
           final notificationService = NotificationService();
           await notificationService.scheduleNotification(task);
         } catch (e) {
-          print('알림 예약 오류: $e');
           // 알림 예약 실패해도 작업은 저장됨
         }
       }
@@ -263,7 +262,7 @@ class _CreateViewState extends State<CreateView> with TickerProviderStateMixin {
                     decoration: BoxDecoration(
                       color: Theme.of(context).brightness == Brightness.dark
                           ? const Color(0xFF2C2C2E)
-                          : Colors.white,
+                          : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: Theme.of(context).brightness == Brightness.dark
@@ -318,7 +317,7 @@ class _CreateViewState extends State<CreateView> with TickerProviderStateMixin {
                     decoration: BoxDecoration(
                       color: Theme.of(context).brightness == Brightness.dark
                           ? const Color(0xFF2C2C2E)
-                          : Colors.white,
+                          : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: Theme.of(context).brightness == Brightness.dark
@@ -373,7 +372,7 @@ class _CreateViewState extends State<CreateView> with TickerProviderStateMixin {
                     decoration: BoxDecoration(
                       color: Theme.of(context).brightness == Brightness.dark
                           ? const Color(0xFF2C2C2E)
-                          : const Color(0xFFF2F2F7),
+                          : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: Theme.of(context).brightness == Brightness.dark
@@ -466,7 +465,9 @@ class _CreateViewState extends State<CreateView> with TickerProviderStateMixin {
                       decoration: BoxDecoration(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? const Color(0xFF2C2C2E).withOpacity(0.5)
-                            : const Color(0xFFF2F2F7).withOpacity(0.5),
+                            : const Color(
+                                0xFFF7FAFC,
+                              ).withOpacity(0.5), // 라이트모드에서는 pale slate 배경
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: Theme.of(context).brightness == Brightness.dark
@@ -504,7 +505,7 @@ class _CreateViewState extends State<CreateView> with TickerProviderStateMixin {
                       decoration: BoxDecoration(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? const Color(0xFF2C2C2E)
-                            : const Color(0xFFF2F2F7),
+                            : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: Theme.of(context).brightness == Brightness.dark

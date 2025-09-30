@@ -91,7 +91,6 @@ class _MiruEditViewState extends State<MiruEditView>
   // 뒤로가기 시 수정사항 확인
   Future<bool> _onWillPop() async {
     final hasChanges = _hasChanges();
-    print('_hasChanges(): $hasChanges'); // 디버깅용 로그
 
     if (!hasChanges) {
       return true;
@@ -108,7 +107,7 @@ class _MiruEditViewState extends State<MiruEditView>
               decoration: BoxDecoration(
                 color: Theme.of(context).brightness == Brightness.dark
                     ? const Color(0xFF1C1C1E)
-                    : Colors.white,
+                    : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -365,7 +364,7 @@ class _MiruEditViewState extends State<MiruEditView>
         try {
           await notificationService.scheduleNotification(widget.task);
         } catch (e) {
-          print('알림 예약 오류: $e');
+          // 알림 예약 실패해도 작업은 저장됨
         }
       }
 
@@ -455,7 +454,7 @@ class _MiruEditViewState extends State<MiruEditView>
                       decoration: BoxDecoration(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? const Color(0xFF2C2C2E)
-                            : Colors.white,
+                            : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: Theme.of(context).brightness == Brightness.dark
@@ -512,7 +511,7 @@ class _MiruEditViewState extends State<MiruEditView>
                       decoration: BoxDecoration(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? const Color(0xFF2C2C2E)
-                            : Colors.white,
+                            : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
                           color: Theme.of(context).brightness == Brightness.dark
@@ -569,7 +568,7 @@ class _MiruEditViewState extends State<MiruEditView>
                       decoration: BoxDecoration(
                         color: Theme.of(context).brightness == Brightness.dark
                             ? const Color(0xFF2C2C2E)
-                            : const Color(0xFFF2F2F7),
+                            : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: Theme.of(context).brightness == Brightness.dark
@@ -662,7 +661,9 @@ class _MiruEditViewState extends State<MiruEditView>
                         decoration: BoxDecoration(
                           color: Theme.of(context).brightness == Brightness.dark
                               ? const Color(0xFF2C2C2E).withOpacity(0.5)
-                              : const Color(0xFFF2F2F7).withOpacity(0.5),
+                              : const Color(
+                                  0xFFF7FAFC,
+                                ).withOpacity(0.5), // 라이트모드에서는 pale slate 배경
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color:
@@ -702,7 +703,9 @@ class _MiruEditViewState extends State<MiruEditView>
                         decoration: BoxDecoration(
                           color: Theme.of(context).brightness == Brightness.dark
                               ? const Color(0xFF2C2C2E)
-                              : const Color(0xFFF2F2F7),
+                              : const Color(
+                                  0xFFF7FAFC,
+                                ), // 라이트모드에서는 pale slate 배경
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
                             color:

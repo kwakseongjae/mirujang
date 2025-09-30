@@ -5,6 +5,9 @@ class MiruHistoryCard extends StatelessWidget {
   final String content;
   final String deadline;
   final VoidCallback? onTap;
+  final bool isSelectionMode;
+  final bool isSelected;
+  final VoidCallback? onSelectionChanged;
 
   const MiruHistoryCard({
     super.key,
@@ -12,6 +15,9 @@ class MiruHistoryCard extends StatelessWidget {
     required this.content,
     required this.deadline,
     this.onTap,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+    this.onSelectionChanged,
   });
 
   @override
@@ -23,7 +29,7 @@ class MiruHistoryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).brightness == Brightness.dark
             ? const Color(0xFF1E1E1E)
-            : Colors.white,
+            : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: Theme.of(context).brightness == Brightness.dark
@@ -33,11 +39,31 @@ class MiruHistoryCard extends StatelessWidget {
         ),
       ),
       child: InkWell(
-        onTap: onTap,
+        onTap: isSelectionMode ? onSelectionChanged : onTap,
         borderRadius: BorderRadius.circular(12),
         child: Row(
           children: [
-            // 좌측: 미루기 내용과 마감일
+            // 좌측: 체크박스 또는 미루기 내용
+            if (isSelectionMode) ...[
+              // 선택 모드일 때 체크박스
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.red : Colors.transparent,
+                  border: Border.all(
+                    color: isSelected ? Colors.red : Colors.grey,
+                    width: 2,
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: isSelected
+                    ? const Icon(Icons.check, color: Colors.white, size: 16)
+                    : null,
+              ),
+              const SizedBox(width: 12),
+            ],
+            // 미루기 내용과 마감일
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,8 +98,9 @@ class MiruHistoryCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            // 우측: 완료 아이콘
-            const Icon(Icons.check_circle, color: Colors.green, size: 24),
+            // 우측: 완료 아이콘 (선택 모드가 아닐 때만)
+            if (!isSelectionMode)
+              const Icon(Icons.check_circle, color: Colors.green, size: 24),
           ],
         ),
       ),
