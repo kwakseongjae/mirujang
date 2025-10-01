@@ -92,6 +92,10 @@ flutter:
           weight: 600
         - asset: assets/fonts/Pretendard-Bold.otf
           weight: 700
+    - family: memomentKukkuk
+      fonts:
+        - asset: assets/fonts/memomentKkukkkuk.otf
+          weight: 400
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package

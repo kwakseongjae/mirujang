@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'presentation/views/main/main_navigation.dart';
 import 'services/theme_service.dart';
 
@@ -10,13 +11,37 @@ class MirugangApp extends StatefulWidget {
   State<MirugangApp> createState() => _MirugangAppState();
 }
 
-class _MirugangAppState extends State<MirugangApp> {
+class _MirugangAppState extends State<MirugangApp> with WidgetsBindingObserver {
   final ThemeService _themeService = ThemeService();
 
   @override
   void initState() {
     super.initState();
     _themeService.loadThemeMode();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      // 앱이 백그라운드로 가거나 종료될 때 시간 기록
+      _recordAppCloseTime();
+    }
+  }
+
+  _recordAppCloseTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentTime = DateTime.now().millisecondsSinceEpoch;
+    await prefs.setInt('last_app_close_time', currentTime);
   }
 
   @override
