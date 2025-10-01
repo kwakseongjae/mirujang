@@ -142,16 +142,25 @@ class _CreateViewState extends State<CreateView> with TickerProviderStateMixin {
           now.day,
           _selectedTime.hour,
           _selectedTime.minute,
+          0, // 초는 0으로 설정 (정각)
+          0, // 밀리초는 0으로 설정
         );
 
-        // 현재 시간과 같으면 1분 후로 설정
-        final isSameTime =
-            now.hour == _selectedTime.hour &&
-            now.minute == _selectedTime.minute;
-        if (isSameTime) {
-          notificationTime = now.add(const Duration(minutes: 1));
-        } else if (selectedDateTime.isBefore(now)) {
-          notificationTime = selectedDateTime.add(const Duration(days: 1));
+        // 현재 시간과 같거나 이전이면 1분 후로 설정 (편의 기능)
+        final nowNormalized = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          now.hour,
+          now.minute,
+          0, // 초는 0으로 정규화
+          0, // 밀리초는 0으로 정규화
+        );
+
+        if (selectedDateTime.isAtSameMomentAs(nowNormalized) ||
+            selectedDateTime.isBefore(nowNormalized)) {
+          // 현재 시간과 같거나 이전이면 1분 후로 설정
+          notificationTime = nowNormalized.add(const Duration(minutes: 1));
         } else {
           notificationTime = selectedDateTime;
         }

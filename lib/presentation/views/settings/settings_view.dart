@@ -352,7 +352,7 @@ class _SettingsViewState extends State<SettingsView>
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
           color: _isNotificationEnabled
-              ? const Color(0xFFEAD49B) // 말풍선 색상 (켜짐)
+              ? const Color(0xFFF4B41F) // #F4B41F 색상 (켜짐)
               : const Color(0xFFD0D0D0), // 더 어두운 회색 배경 (꺼짐)
         ),
         child: Stack(

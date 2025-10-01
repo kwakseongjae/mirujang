@@ -158,6 +158,18 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    // 모든 하트 애니메이션 정리
+    for (var heart in _hearts) {
+      heart.dispose();
+    }
+    _hearts.clear();
+
+    // 모든 Z 아이콘 애니메이션 정리
+    for (var zzzIcon in _zzzIcons) {
+      zzzIcon.dispose();
+    }
+    _zzzIcons.clear();
+
     _heartAnimationController.dispose();
     _toastAnimationController.dispose();
     _notificationTimer?.cancel();
@@ -193,7 +205,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
 
   // 미루기 상세 보기 메서드
   void _showTaskDetail(MiruTask task) async {
-    await Navigator.of(context).push(
+    final result = await Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             MiruDetailView(task: task),
@@ -214,13 +226,29 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       ),
     );
 
-    // 상세 페이지에서 돌아오면 항상 최신 데이터를 반영
-    await _loadTasks();
+    // 상세 페이지에서 삭제나 완료 작업이 있었거나 편집이 완료되었으면 새로고침
+    if (result == true ||
+        result is MiruTask ||
+        result == 'completed' ||
+        result == 'deleted') {
+      // AnimatedList를 완전히 새로고침하기 위해 키를 재생성
+      _animatedListKey = GlobalKey<AnimatedListState>();
+      await _loadTasks();
+
+      // 완료 처리된 경우 토스트 메시지 표시
+      if (result == 'completed') {
+        _showToastMessage('미루기가 완료되었습니다! 🎉', Colors.green);
+      }
+      // 삭제 처리된 경우 토스트 메시지 표시
+      else if (result == 'deleted') {
+        _showToastMessage('미루기가 삭제되었습니다', Colors.red);
+      }
+    }
   }
 
   // 미루기 편집 메서드
   void _editTask(MiruTask task) async {
-    await Navigator.of(context).push(
+    final result = await Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             MiruEditView(task: task),
@@ -242,7 +270,10 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
     );
 
     // 편집 완료 후 목록 새로고침
-    await _loadTasks();
+    if (result != null) {
+      // 편집이 완료된 경우에만 새로고침
+      await _loadTasks();
+    }
   }
 
   // 하트 생성 메서드
@@ -382,20 +413,24 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
         return 1;
       }
 
-      // 3. 시간순 (가운데선이 있어도 상관없음)
-      if (a.hasNotification &&
-          b.hasNotification &&
+      // 2. 알림 완료 우선 (알림 없음 다음)
+      if (a.status == MiruTaskStatus.notificationCompleted &&
+          b.status != MiruTaskStatus.notificationCompleted) {
+        return -1;
+      }
+      if (a.status != MiruTaskStatus.notificationCompleted &&
+          b.status == MiruTaskStatus.notificationCompleted) {
+        return 1;
+      }
+
+      // 3. 알림 시각이 가까운 순 (알림 예정된 것들과 일시정지된 것들)
+      if ((a.status == MiruTaskStatus.notificationScheduled ||
+              a.status == MiruTaskStatus.notificationPaused) &&
+          (b.status == MiruTaskStatus.notificationScheduled ||
+              b.status == MiruTaskStatus.notificationPaused) &&
           a.notificationTime != null &&
           b.notificationTime != null) {
-        final now = DateTime.now();
-        final aTime = a.notificationTime!.isBefore(now)
-            ? a.notificationTime!.add(const Duration(days: 1))
-            : a.notificationTime!;
-        final bTime = b.notificationTime!.isBefore(now)
-            ? b.notificationTime!.add(const Duration(days: 1))
-            : b.notificationTime!;
-
-        return aTime.compareTo(bTime);
+        return a.notificationTime!.compareTo(b.notificationTime!);
       }
 
       // 4. 생성 시간 순
@@ -428,9 +463,15 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
           _isInitialLoad = false; // 초기 로드 완료
         });
       } else {
-        // 새로 추가된 아이템들에 대해 애니메이션 추가
-        for (int i = previousTaskCount; i < _tasks.length; i++) {
-          _animatedListKey.currentState?.insertItem(i);
+        // 작업 수가 변경된 경우 AnimatedList를 완전히 새로고침
+        if (previousTaskCount != _tasks.length) {
+          // AnimatedList 키를 재생성하여 완전히 새로고침
+          _animatedListKey = GlobalKey<AnimatedListState>();
+        } else {
+          // 새로 추가된 아이템들에 대해 애니메이션 추가
+          for (int i = previousTaskCount; i < _tasks.length; i++) {
+            _animatedListKey.currentState?.insertItem(i);
+          }
         }
 
         setState(() {
@@ -470,6 +511,9 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
 
       // UI 즉시 업데이트 (텍스트, 이미지, 말풍선 반영)
       setState(() {});
+
+      // 삭제 성공 토스트 메시지 표시
+      _showToastMessage('미루기가 삭제되었습니다', Colors.red);
     } catch (e) {
       // 작업 삭제 실패 시 사용자에게 알림
       _showToastMessage('작업 삭제 중 오류가 발생했습니다.', Colors.red);
@@ -485,6 +529,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       // 작업 완료 처리
       task.isCompleted = true;
       task.isEnabled = false;
+      task.completedAt = DateTime.now(); // 완료 처리 시점 기록
 
       // 알림 취소
       final notificationService = NotificationService();
@@ -507,7 +552,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
       setState(() {});
 
       // 완료 토스트 메시지 표시
-      _showToastMessage('작업이 완료되었습니다! 🎉', Colors.green);
+      _showToastMessage('미루기가 완료되었습니다! 🎉', Colors.green);
 
       // 사용자 액션 로깅
       Logger.userAction(
@@ -549,6 +594,11 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
             await notificationService.scheduleNotification(task);
           }
           break;
+
+        case MiruTaskStatus.notificationCompleted:
+          // 알림 완료 상태에서 토글 On 시 시간 설정 모달 표시
+          _showTimeSettingModal(task);
+          return;
       }
 
       // 저장소에 업데이트
@@ -587,6 +637,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
           task.hasNotification = true; // 알림 설정 활성화
           task.isEnabled = true;
           task.isCompleted = false; // 시간 재설정 시 완료 상태 초기화
+          task.completedAt = null; // 완료 시간도 초기화
 
           final storageService = await StorageService.getInstance();
           await storageService.updateTask(task);
@@ -1135,10 +1186,32 @@ class _TimeSettingModalState extends State<TimeSettingModal> {
                   now.day,
                   _selectedTime.hour,
                   _selectedTime.minute,
-                  0, // 초는 0으로 설정
+                  0, // 초는 0으로 설정 (정각)
                   0, // 밀리초는 0으로 설정
                 );
-                widget.onTimeSet(exactTime);
+
+                // 현재 시간과 같거나 이전이면 1분 후로 설정 (편의 기능)
+                final nowNormalized = DateTime(
+                  now.year,
+                  now.month,
+                  now.day,
+                  now.hour,
+                  now.minute,
+                  0, // 초는 0으로 정규화
+                  0, // 밀리초는 0으로 정규화
+                );
+
+                if (exactTime.isAtSameMomentAs(nowNormalized) ||
+                    exactTime.isBefore(nowNormalized)) {
+                  // 현재 시간과 같거나 이전이면 1분 후로 설정
+                  final oneMinuteLater = nowNormalized.add(
+                    const Duration(minutes: 1),
+                  );
+                  widget.onTimeSet(oneMinuteLater);
+                } else {
+                  widget.onTimeSet(exactTime);
+                }
+
                 Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(

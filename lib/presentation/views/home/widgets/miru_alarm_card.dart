@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../../widgets/delete_confirmation_dialog.dart';
 
 class MiruAlarmCard extends StatefulWidget {
   final String title;
@@ -447,141 +449,21 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
   }
 
   void _showDeleteConfirmationModal() {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) => _buildDeleteConfirmationDialog(),
+    DeleteConfirmationDialog.show(
+      context,
+      onConfirm: () {
+        widget.onDelete?.call();
+      },
     );
   }
 
-  Widget _buildDeleteConfirmationDialog() {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      child: Container(
-        width: double.infinity,
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF1C1C1E)
-              : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // 상단 텍스트 영역
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
-              child: Column(
-                children: [
-                  Text(
-                    '미루기를 삭제하시겠어요?',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white
-                          : Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '삭제된 미루기는 복구할 수 없습니다.\n정말 삭제하시겠어요?',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      height: 1.4,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? Colors.white.withOpacity(0.7)
-                          : Colors.black.withOpacity(0.7),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+  // 롱 프레스 핸들러
+  void _handleLongPress() {
+    // 햅틱 피드백 제공 (iOS 표준)
+    HapticFeedback.mediumImpact();
 
-            // 하단 버튼 영역
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-              child: Row(
-                children: [
-                  // 취소 버튼 (좌측)
-                  Expanded(
-                    child: Container(
-                      height: 44,
-                      margin: const EdgeInsets.only(right: 4),
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.of(context).pop(false),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFF2C2C2E)
-                              : const Color(0xFFF2F2F7),
-                          foregroundColor:
-                              Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black,
-                          elevation: 0,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          '취소',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // 삭제 버튼 (우측)
-                  Expanded(
-                    child: Container(
-                      height: 44,
-                      margin: const EdgeInsets.only(left: 4),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(true);
-                          widget.onDelete?.call();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: const Text(
-                          '삭제',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+    // 기존 더보기 버튼과 동일한 모달 표시
+    _showOptionsModal();
   }
 
   void _resetSwipeState() {
@@ -682,6 +564,7 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
                       widget.onTap?.call();
                     }
                   },
+                  onLongPress: _handleLongPress, // 롱 프레스 핸들러 추가
                   onHorizontalDragStart: _handleDragStart,
                   onHorizontalDragUpdate: _handleDragUpdate,
                   onHorizontalDragEnd: _handleDragEnd,
@@ -764,8 +647,8 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
                                       borderRadius: BorderRadius.circular(15),
                                       color: _isToggled
                                           ? const Color(
-                                              0xFFEAD49B,
-                                            ) // 말풍선 색상 (켜짐)
+                                              0xFFF4B41F,
+                                            ) // #F4B41F 색상 (켜짐)
                                           : const Color(
                                               0xFFD0D0D0,
                                             ), // 더 어두운 회색 배경 (꺼짐)

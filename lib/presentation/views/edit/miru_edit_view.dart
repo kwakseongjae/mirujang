@@ -166,7 +166,7 @@ class _MiruEditViewState extends State<MiruEditView>
                             height: 44,
                             margin: const EdgeInsets.only(right: 4),
                             child: ElevatedButton(
-                              onPressed: () => Navigator.of(context).pop(false),
+                              onPressed: () => Navigator.of(context).pop(null),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor:
                                     Theme.of(context).brightness ==
@@ -200,7 +200,7 @@ class _MiruEditViewState extends State<MiruEditView>
                             height: 44,
                             margin: const EdgeInsets.only(left: 4),
                             child: ElevatedButton(
-                              onPressed: () => Navigator.of(context).pop(true),
+                              onPressed: () => _saveTask(),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red,
                                 foregroundColor: Colors.white,
@@ -238,15 +238,6 @@ class _MiruEditViewState extends State<MiruEditView>
 
     final now = DateTime.now();
 
-    // 현재 시간과 설정한 시간이 같은 분인지 확인 (시, 분만 비교)
-    final isSameTime =
-        now.hour == _selectedTime!.hour && now.minute == _selectedTime!.minute;
-
-    // 현재 시각과 정확히 같을 때만 "1분 이내에 알림을 받아요" 표시
-    if (isSameTime) {
-      return '1분 이내에 알림을 받아요';
-    }
-
     // 현재 시간을 분 단위로 정규화 (초를 0으로)
     final currentTimeNormalized = DateTime(
       now.year,
@@ -254,16 +245,25 @@ class _MiruEditViewState extends State<MiruEditView>
       now.day,
       now.hour,
       now.minute,
+      0, // 초는 0으로 설정
+      0, // 밀리초는 0으로 설정
     );
 
-    // 설정한 시간
+    // 설정한 시간 (정각으로 설정)
     final selectedDateTime = DateTime(
       now.year,
       now.month,
       now.day,
       _selectedTime!.hour,
       _selectedTime!.minute,
+      0, // 초는 0으로 설정
+      0, // 밀리초는 0으로 설정
     );
+
+    // 현재 시각과 정확히 같을 때만 "1분 이내에 알림을 받아요" 표시
+    if (selectedDateTime.isAtSameMomentAs(currentTimeNormalized)) {
+      return '1분 이내에 알림을 받아요';
+    }
 
     // 설정한 시간이 현재 시간보다 이전이면 다음날로 설정
     final notificationDateTime =
@@ -328,16 +328,25 @@ class _MiruEditViewState extends State<MiruEditView>
           now.day,
           _selectedTime!.hour,
           _selectedTime!.minute,
+          0, // 초는 0으로 설정 (정각)
+          0, // 밀리초는 0으로 설정
         );
 
-        // 현재 시간과 같으면 1분 후로 설정
-        final isSameTime =
-            now.hour == _selectedTime!.hour &&
-            now.minute == _selectedTime!.minute;
-        if (isSameTime) {
-          notificationTime = now.add(const Duration(minutes: 1));
-        } else if (selectedDateTime.isBefore(now)) {
-          notificationTime = selectedDateTime.add(const Duration(days: 1));
+        // 현재 시간과 같거나 이전이면 1분 후로 설정 (편의 기능)
+        final nowNormalized = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          now.hour,
+          now.minute,
+          0, // 초는 0으로 정규화
+          0, // 밀리초는 0으로 정규화
+        );
+
+        if (selectedDateTime.isAtSameMomentAs(nowNormalized) ||
+            selectedDateTime.isBefore(nowNormalized)) {
+          // 현재 시간과 같거나 이전이면 1분 후로 설정
+          notificationTime = nowNormalized.add(const Duration(minutes: 1));
         } else {
           notificationTime = selectedDateTime;
         }
@@ -394,7 +403,7 @@ class _MiruEditViewState extends State<MiruEditView>
                 onPressed: () async {
                   final shouldPop = await _onWillPop();
                   if (shouldPop && mounted) {
-                    Navigator.of(context).pop();
+                    Navigator.of(context).pop(null);
                   }
                 },
                 color: Theme.of(context).brightness == Brightness.dark

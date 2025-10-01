@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import '../../../models/miru_task.dart';
+import '../../../services/storage_service.dart';
+import '../../../services/notification_service.dart';
+import '../../../utils/logger.dart';
 import '../edit/miru_edit_view.dart';
+import '../../widgets/delete_confirmation_dialog.dart';
 
 class MiruDetailView extends StatefulWidget {
   final MiruTask task;
@@ -13,6 +17,7 @@ class MiruDetailView extends StatefulWidget {
 
 class _MiruDetailViewState extends State<MiruDetailView> {
   late MiruTask _currentTask;
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -28,7 +33,7 @@ class _MiruDetailViewState extends State<MiruDetailView> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(context).pop(_currentTask),
           color: Theme.of(context).brightness == Brightness.dark
               ? Colors.white
               : Colors.black,
@@ -95,37 +100,50 @@ class _MiruDetailViewState extends State<MiruDetailView> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 제목 섹션
-              _buildSection(
-                context,
-                '제목',
-                _currentTask.title,
-                isRequired: true,
-              ),
-              const SizedBox(height: 24),
+        child: Column(
+          children: [
+            // 메인 콘텐츠
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 제목 섹션
+                    _buildSection(
+                      context,
+                      '제목',
+                      _currentTask.title,
+                      isRequired: true,
+                    ),
+                    const SizedBox(height: 24),
 
-              // 메모 섹션
-              if (_currentTask.memo.isNotEmpty) ...[
-                _buildSection(
-                  context,
-                  '메모',
-                  _currentTask.memo,
-                  isRequired: false,
+                    // 메모 섹션
+                    if (_currentTask.memo.isNotEmpty) ...[
+                      _buildSection(
+                        context,
+                        '메모',
+                        _currentTask.memo,
+                        isRequired: false,
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // 알림 설정 섹션 (완료된 작업이 아닐 때만 표시)
+                    if (!_currentTask.isCompleted) ...[
+                      _buildNotificationSection(context),
+                    ],
+
+                    // 하단 여백 (버튼과 겹치지 않도록)
+                    const SizedBox(height: 100),
+                  ],
                 ),
-                const SizedBox(height: 24),
-              ],
+              ),
+            ),
 
-              // 알림 설정 섹션 (완료된 작업이 아닐 때만 표시)
-              if (!_currentTask.isCompleted) ...[
-                _buildNotificationSection(context),
-              ],
-            ],
-          ),
+            // 하단 액션 버튼들
+            _buildActionButtons(context),
+          ],
         ),
       ),
     );
@@ -299,5 +317,190 @@ class _MiruDetailViewState extends State<MiruDetailView> {
     final hour = dateTime.hour.toString().padLeft(2, '0');
     final minute = dateTime.minute.toString().padLeft(2, '0');
     return '$hour:$minute';
+  }
+
+  // 하단 액션 버튼들
+  Widget _buildActionButtons(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(),
+      child: SafeArea(
+        child: Row(
+          children: [
+            // 삭제 버튼
+            Expanded(child: _buildDeleteButton(context)),
+            const SizedBox(width: 12),
+            // 완료 버튼 (완료되지 않은 작업일 때만 표시)
+            if (!_currentTask.isCompleted)
+              Expanded(child: _buildCompleteButton(context)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 삭제 버튼
+  Widget _buildDeleteButton(BuildContext context) {
+    return OutlinedButton(
+      onPressed: _isLoading ? null : _handleDelete,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: const Color(0xFFFF3B30), // Apple 스타일 빨간색
+        side: const BorderSide(color: Color(0xFFFF3B30), width: 2),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: Colors.transparent,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.delete_outline, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            '삭제',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 완료 버튼
+  Widget _buildCompleteButton(BuildContext context) {
+    return OutlinedButton(
+      onPressed: _isLoading ? null : _handleComplete,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: const Color(0xFF34C759), // Apple 스타일 초록색
+        side: const BorderSide(color: Color(0xFF34C759), width: 2),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: Colors.transparent,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.check_circle_outline, size: 20),
+          const SizedBox(width: 8),
+          Text(
+            '완료',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 삭제 처리
+  Future<void> _handleDelete() async {
+    // 삭제 확인 다이얼로그 표시
+    final confirmed = await DeleteConfirmationDialog.show(context);
+    if (confirmed != true) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final storageService = await StorageService.getInstance();
+      final notificationService = NotificationService();
+
+      // 알림 취소
+      await notificationService.cancelNotification(_currentTask.id);
+
+      // 저장소에서 삭제
+      await storageService.deleteTask(_currentTask.id);
+
+      // 이전 화면으로 돌아가기 (삭제됨을 알림)
+      if (mounted) {
+        Navigator.of(
+          context,
+        ).pop('deleted'); // 'deleted'를 반환하여 이전 화면에서 새로고침 및 토스트 표시
+      }
+
+      // 사용자 액션 로깅
+      Logger.userAction(
+        'Task deleted from detail view',
+        data: {
+          'taskId': _currentTask.id,
+          'title': _currentTask.title,
+          'deletionTime': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('삭제 중 오류가 발생했습니다'),
+            backgroundColor: const Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // 완료 처리
+  Future<void> _handleComplete() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final storageService = await StorageService.getInstance();
+      final notificationService = NotificationService();
+
+      // 작업 완료 처리
+      _currentTask.isCompleted = true;
+      _currentTask.isEnabled = false;
+      _currentTask.completedAt = DateTime.now(); // 완료 처리 시점 기록
+
+      // 알림 취소
+      await notificationService.cancelNotification(_currentTask.id);
+
+      // 저장소에 업데이트
+      await storageService.updateTask(_currentTask);
+
+      // 홈 화면으로 돌아가기 (토스트는 홈 화면에서 표시)
+      if (mounted) {
+        Navigator.of(context).pop('completed'); // 완료 상태를 반환하여 홈 화면에서 토스트 표시
+      }
+
+      // 사용자 액션 로깅
+      Logger.userAction(
+        'Task completed from detail view',
+        data: {
+          'taskId': _currentTask.id,
+          'title': _currentTask.title,
+          'completionTime': DateTime.now().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('완료 처리 중 오류가 발생했습니다'),
+            backgroundColor: const Color(0xFFFF3B30),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 }

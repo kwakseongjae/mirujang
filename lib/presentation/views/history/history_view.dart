@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../models/miru_task.dart';
 import '../../../services/storage_service.dart';
+// import '../../../services/dummy_data_service.dart'; // 개발용 - 필요시 주석 해제
 import '../detail/miru_detail_view.dart';
 import 'widgets/miru_history_card.dart';
 
@@ -30,6 +31,13 @@ class _HistoryViewState extends State<HistoryView>
   bool _isSelectionMode = false;
   final Set<String> _selectedTaskIds = {};
 
+  // 토스트 메시지 관련
+  bool _showToast = false;
+  String _toastMessage = '';
+  Color _toastColor = Colors.green;
+  late AnimationController _toastAnimationController;
+  late Animation<Offset> _toastAnimation;
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +55,19 @@ class _HistoryViewState extends State<HistoryView>
       ),
     );
 
+    // 토스트 애니메이션 컨트롤러 초기화
+    _toastAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _toastAnimation =
+        Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _toastAnimationController,
+            curve: Curves.easeOut,
+          ),
+        );
+
     // 초기 상태를 표시로 설정
     _searchAnimationController.value = 1.0;
 
@@ -61,8 +82,36 @@ class _HistoryViewState extends State<HistoryView>
   void dispose() {
     _searchController.dispose();
     _searchAnimationController.dispose();
+    _toastAnimationController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  // 토스트 메시지 표시 메서드
+  void _showToastMessage(String message, Color color) {
+    // 이미 토스트가 표시 중이면 중복 표시하지 않음
+    if (_showToast) return;
+
+    setState(() {
+      _showToast = true;
+      _toastMessage = message;
+      _toastColor = color;
+    });
+
+    _toastAnimationController.forward().then((_) {
+      // 3초 후 토스트 숨기기
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) {
+          _toastAnimationController.reverse().then((_) {
+            if (mounted) {
+              setState(() {
+                _showToast = false;
+              });
+            }
+          });
+        }
+      });
+    });
   }
 
   Future<void> _loadCompletedTasks() async {
@@ -73,8 +122,12 @@ class _HistoryViewState extends State<HistoryView>
       // 완료된 작업만 필터링
       _completedTasks = allTasks.where((task) => task.isCompleted).toList();
 
-      // 완료 시간 순으로 정렬 (최신순)
-      _completedTasks.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      // 완료 시간 순으로 정렬 (최신순) - completedAt이 있으면 그것을, 없으면 createdAt을 사용
+      _completedTasks.sort((a, b) {
+        final aTime = a.completedAt ?? a.createdAt;
+        final bTime = b.completedAt ?? b.createdAt;
+        return bTime.compareTo(aTime);
+      });
 
       // 날짜별로 그룹화
       _groupedTasks = _groupTasksByDate(_completedTasks);
@@ -89,135 +142,251 @@ class _HistoryViewState extends State<HistoryView>
     }
   }
 
+  // 운동 관련 더미 데이터 생성 (개발용 - 필요시 주석 해제)
+  // Future<void> _generateExerciseDummyData() async {
+  //   try {
+  //     final count = await DummyDataService.generateExerciseDummyData();
+
+  //     // 성공 메시지 표시
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text('$count개의 운동 더미 데이터가 생성되었습니다!'),
+  //           backgroundColor: const Color(0xFF34C759),
+  //           behavior: SnackBarBehavior.floating,
+  //           shape: RoundedRectangleBorder(
+  //             borderRadius: BorderRadius.circular(8),
+  //           ),
+  //         ),
+  //       );
+  //     }
+
+  //     // 히스토리 목록 새로고침
+  //     await _loadCompletedTasks();
+  //   } catch (e) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text('더미 데이터 생성 중 오류가 발생했습니다: $e'),
+  //           backgroundColor: const Color(0xFFFF3B30),
+  //           behavior: SnackBarBehavior.floating,
+  //           shape: RoundedRectangleBorder(
+  //             borderRadius: BorderRadius.circular(8),
+  //           ),
+  //         ),
+  //       );
+  //     }
+  //   }
+  // }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: _isSelectionMode
-            ? Text(
-                '${_selectedTaskIds.length}개 선택됨',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              )
-            : const Text(
-                '히스토리',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-              ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-        leading: _isSelectionMode
-            ? IconButton(
-                onPressed: _exitSelectionMode,
-                icon: const Icon(Icons.close),
-              )
-            : null,
-        actions: _isSelectionMode
-            ? [
-                // 선택 모드일 때 삭제 버튼
-                if (_selectedTaskIds.isNotEmpty)
-                  TextButton(
-                    onPressed: _deleteSelectedTasks,
-                    child: const Text(
-                      '삭제',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            title: _isSelectionMode
+                ? Text(
+                    '${_selectedTaskIds.length}개 선택됨',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  )
+                : const Text(
+                    '히스토리',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                  ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            centerTitle: true,
+            leading: _isSelectionMode
+                ? IconButton(
+                    onPressed: _exitSelectionMode,
+                    icon: const Icon(Icons.close),
+                  )
+                : null,
+            actions: _isSelectionMode
+                ? [
+                    // 선택 모드일 때 삭제 버튼
+                    if (_selectedTaskIds.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: TextButton(
+                          onPressed: _deleteSelectedTasks,
+                          child: const Text(
+                            '삭제',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ]
+                : [
+                    // 편집 모드 진입
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: TextButton(
+                        onPressed: _enterSelectionMode,
+                        child: Text(
+                          '편집',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white
+                                : Colors.black,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-              ]
-            : [
-                // 일반 모드일 때 기존 버튼들
-                // 개발용: 더미 히스토리 추가
-                IconButton(
-                  onPressed: () async {
-                    await _addDummyHistory();
-                    _loadCompletedTasks(); // UI 새로고침
-                  },
-                  icon: const Icon(Icons.add),
-                  tooltip: '더미 히스토리 추가',
-                ),
-                // 선택 삭제 모드 진입
-                IconButton(
-                  onPressed: _enterSelectionMode,
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  tooltip: '선택 삭제',
-                ),
-              ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _completedTasks.isEmpty
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.history_rounded, size: 80, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    '아직 완료된 일정이 없어요',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    '미루기를 완료하면 여기에 기록됩니다',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
-              ),
-            )
-          : RefreshIndicator(
-              onRefresh: _loadCompletedTasks,
-              child: Column(
-                children: [
-                  // iOS 스타일 검색바
-                  AnimatedBuilder(
-                    animation: _searchAnimation,
-                    builder: (context, child) {
-                      return SizeTransition(
-                        sizeFactor: _searchAnimation,
-                        child: Container(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                          child: _buildSearchBar(),
+                    // 개발용: 더미 데이터 생성 버튼 (주석 처리)
+                    // IconButton(
+                    //   onPressed: _generateExerciseDummyData,
+                    //   icon: const Icon(Icons.add),
+                    //   tooltip: '운동 더미 데이터 생성',
+                    // ),
+                  ],
+          ),
+          body: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _completedTasks.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.history_rounded, size: 80, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        '아직 완료된 일정이 없어요',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey,
                         ),
-                      );
-                    },
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        '미루기를 완료하면 여기에 기록됩니다',
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ],
                   ),
-                  // 히스토리 목록
-                  Expanded(
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      itemCount: _groupedTasks.length,
-                      itemBuilder: (context, index) {
-                        final sortedKeys = _groupedTasks.keys.toList()
-                          ..sort((a, b) => b.compareTo(a)); // 최신 날짜부터
-                        final dateKey = sortedKeys[index];
-                        final tasks = _groupedTasks[dateKey]!;
-                        final dateTime = DateTime.parse(dateKey);
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadCompletedTasks,
+                  child: Column(
+                    children: [
+                      // iOS 스타일 검색바
+                      AnimatedBuilder(
+                        animation: _searchAnimation,
+                        builder: (context, child) {
+                          return SizeTransition(
+                            sizeFactor: _searchAnimation,
+                            child: Container(
+                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                              child: _buildSearchBar(),
+                            ),
+                          );
+                        },
+                      ),
+                      // 히스토리 목록
+                      Expanded(
+                        child: ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          itemCount: _groupedTasks.length,
+                          itemBuilder: (context, index) {
+                            final sortedKeys = _groupedTasks.keys.toList()
+                              ..sort((a, b) => b.compareTo(a)); // 최신 날짜부터
+                            final dateKey = sortedKeys[index];
+                            final tasks = _groupedTasks[dateKey]!;
+                            final dateTime = DateTime.parse(dateKey);
 
-                        return _buildDateSection(dateTime, tasks);
-                      },
-                    ),
+                            return _buildDateSection(dateTime, tasks);
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
+        ),
+        // 토스트 메시지
+        if (_showToast)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 16,
+            left: 16,
+            right: 16,
+            child: SlideTransition(
+              position: _toastAnimation,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: _toastColor,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _toastColor == Colors.green
+                          ? Icons.check_circle
+                          : Icons.error,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _toastMessage,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
+          ),
+      ],
     );
   }
 
-  void _showTaskDetail(MiruTask task) {
-    Navigator.of(
+  void _showTaskDetail(MiruTask task) async {
+    final result = await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (context) => MiruDetailView(task: task)));
+
+    // 상세페이지에서 돌아왔을 때 결과 처리
+    if (result == true ||
+        result is MiruTask ||
+        result == 'completed' ||
+        result == 'deleted') {
+      // 히스토리 목록 새로고침
+      await _loadCompletedTasks();
+
+      // 삭제 처리된 경우 토스트 메시지 표시
+      if (result == 'deleted') {
+        _showToastMessage('미루기 기록이 삭제되었습니다', Colors.red);
+      }
+    }
   }
 
   // 선택 모드 진입
@@ -272,6 +441,9 @@ class _HistoryViewState extends State<HistoryView>
     );
 
     if (confirmed == true) {
+      // 삭제할 개수를 미리 저장
+      final deleteCount = _selectedTaskIds.length;
+
       try {
         final storageService = await StorageService.getInstance();
         final allTasks = await storageService.getTasks();
@@ -285,14 +457,17 @@ class _HistoryViewState extends State<HistoryView>
         // UI 업데이트
         _exitSelectionMode();
         _loadCompletedTasks();
+
+        // 삭제 성공 토스트 메시지 표시
+        _showToastMessage(
+          deleteCount == 1
+              ? '미루기 기록이 삭제되었습니다'
+              : '$deleteCount개의 미루기 기록이 삭제되었습니다',
+          Colors.red,
+        );
       } catch (e) {
         // 선택된 작업 삭제 실패 시 사용자에게 알림
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('작업 삭제 중 오류가 발생했습니다.'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showToastMessage('작업 삭제 중 오류가 발생했습니다.', Colors.red);
       }
     }
   }
@@ -427,166 +602,6 @@ class _HistoryViewState extends State<HistoryView>
     );
   }
 
-  // 개발용 더미 히스토리 추가
-  Future<void> _addDummyHistory() async {
-    final storageService = await StorageService.getInstance();
-    final now = DateTime.now();
-
-    // 다양한 날짜의 더미 데이터 생성
-    final dummyTasks = [
-      // 오늘
-      MiruTask(
-        id: 'dummy_${now.millisecondsSinceEpoch}_1',
-        title: '오늘의 운동하기',
-        memo: '헬스장에서 1시간 운동 완료!',
-        createdAt: now.subtract(const Duration(hours: 2)),
-        isCompleted: true,
-        isEnabled: false,
-        hasNotification: false,
-      ),
-      MiruTask(
-        id: 'dummy_${now.millisecondsSinceEpoch}_2',
-        title: '프로젝트 문서 작성',
-        memo: 'API 문서 정리 완료',
-        createdAt: now.subtract(const Duration(hours: 5)),
-        isCompleted: true,
-        isEnabled: false,
-        hasNotification: false,
-      ),
-
-      // 어제
-      MiruTask(
-        id: 'dummy_${now.millisecondsSinceEpoch}_3',
-        title: '장보기',
-        memo: '마트에서 필요한 것들 구매 완료',
-        createdAt: now.subtract(const Duration(days: 1, hours: 3)),
-        isCompleted: true,
-        isEnabled: false,
-        hasNotification: false,
-      ),
-      MiruTask(
-        id: 'dummy_${now.millisecondsSinceEpoch}_4',
-        title: '친구와 저녁 식사',
-        memo: '맛있는 파스타 먹고 왔어요',
-        createdAt: now.subtract(const Duration(days: 1, hours: 8)),
-        isCompleted: true,
-        isEnabled: false,
-        hasNotification: false,
-      ),
-
-      // 2일 전
-      MiruTask(
-        id: 'dummy_${now.millisecondsSinceEpoch}_5',
-        title: '책 읽기',
-        memo: '자기계발서 한 권 완독',
-        createdAt: now.subtract(const Duration(days: 2, hours: 2)),
-        isCompleted: true,
-        isEnabled: false,
-        hasNotification: false,
-      ),
-      MiruTask(
-        id: 'dummy_${now.millisecondsSinceEpoch}_6',
-        title: '방 정리하기',
-        memo: '책상과 옷장 정리 완료',
-        createdAt: now.subtract(const Duration(days: 2, hours: 6)),
-        isCompleted: true,
-        isEnabled: false,
-        hasNotification: false,
-      ),
-      MiruTask(
-        id: 'dummy_${now.millisecondsSinceEpoch}_7',
-        title: '영화 보기',
-        memo: '넷플릭스에서 좋은 영화 봤어요',
-        createdAt: now.subtract(const Duration(days: 2, hours: 10)),
-        isCompleted: true,
-        isEnabled: false,
-        hasNotification: false,
-      ),
-
-      // 3일 전
-      MiruTask(
-        id: 'dummy_${now.millisecondsSinceEpoch}_8',
-        title: '산책하기',
-        memo: '공원에서 30분 산책 완료',
-        createdAt: now.subtract(const Duration(days: 3, hours: 1)),
-        isCompleted: true,
-        isEnabled: false,
-        hasNotification: false,
-      ),
-      MiruTask(
-        id: 'dummy_${now.millisecondsSinceEpoch}_9',
-        title: '요리하기',
-        memo: '새로운 레시피로 파스타 만들기',
-        createdAt: now.subtract(const Duration(days: 3, hours: 4)),
-        isCompleted: true,
-        isEnabled: false,
-        hasNotification: false,
-      ),
-
-      // 4일 전
-      MiruTask(
-        id: 'dummy_${now.millisecondsSinceEpoch}_10',
-        title: '게임하기',
-        memo: '친구들과 온라인 게임',
-        createdAt: now.subtract(const Duration(days: 4, hours: 3)),
-        isCompleted: true,
-        isEnabled: false,
-        hasNotification: false,
-      ),
-      MiruTask(
-        id: 'dummy_${now.millisecondsSinceEpoch}_11',
-        title: '음악 듣기',
-        memo: '새로 나온 앨범 감상',
-        createdAt: now.subtract(const Duration(days: 4, hours: 7)),
-        isCompleted: true,
-        isEnabled: false,
-        hasNotification: false,
-      ),
-
-      // 5일 전
-      MiruTask(
-        id: 'dummy_${now.millisecondsSinceEpoch}_12',
-        title: '독서하기',
-        memo: '소설책 한 권 읽기',
-        createdAt: now.subtract(const Duration(days: 5, hours: 2)),
-        isCompleted: true,
-        isEnabled: false,
-        hasNotification: false,
-      ),
-
-      // 1주일 전
-      MiruTask(
-        id: 'dummy_${now.millisecondsSinceEpoch}_13',
-        title: '주말 정리',
-        memo: '일주일치 정리 완료',
-        createdAt: now.subtract(const Duration(days: 7, hours: 1)),
-        isCompleted: true,
-        isEnabled: false,
-        hasNotification: false,
-      ),
-      MiruTask(
-        id: 'dummy_${now.millisecondsSinceEpoch}_14',
-        title: '가족과 시간 보내기',
-        memo: '가족과 함께 저녁 식사',
-        createdAt: now.subtract(const Duration(days: 7, hours: 5)),
-        isCompleted: true,
-        isEnabled: false,
-        hasNotification: false,
-      ),
-    ];
-
-    // 기존 작업들 가져오기
-    final existingTasks = await storageService.getTasks();
-
-    // 더미 작업들 추가
-    for (final task in dummyTasks) {
-      existingTasks.add(task);
-    }
-
-    // 저장
-    await storageService.saveTasks(existingTasks);
-  }
-
   // 날짜 섹션 위젯 생성
   Widget _buildDateSection(DateTime dateTime, List<MiruTask> tasks) {
     return Column(
@@ -617,7 +632,7 @@ class _HistoryViewState extends State<HistoryView>
             child: MiruHistoryCard(
               title: task.title,
               content: task.memo,
-              deadline: _formatRelativeTime(task.createdAt),
+              deadline: _formatRelativeTime(task.completedAt ?? task.createdAt),
               isSelectionMode: _isSelectionMode,
               isSelected: _selectedTaskIds.contains(task.id),
               onTap: () {
@@ -639,7 +654,9 @@ class _HistoryViewState extends State<HistoryView>
     final Map<String, List<MiruTask>> grouped = {};
 
     for (final task in tasks) {
-      final dateKey = _getDateKey(task.createdAt);
+      // completedAt이 있으면 그것을, 없으면 createdAt을 사용
+      final dateTime = task.completedAt ?? task.createdAt;
+      final dateKey = _getDateKey(dateTime);
       if (!grouped.containsKey(dateKey)) {
         grouped[dateKey] = [];
       }
