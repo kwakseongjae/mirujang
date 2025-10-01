@@ -147,7 +147,7 @@ class NotificationService {
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       payload: task.id,
-      matchDateTimeComponents: DateTimeComponents.time, // 정확한 시간 매칭
+      // matchDateTimeComponents 제거 - 일회성 알림이므로 정확한 시간에만 울림
     );
 
     Logger.userAction(

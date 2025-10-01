@@ -2,6 +2,7 @@ enum MiruTaskStatus {
   noNotification, // 1. 알림 없음
   notificationScheduled, // 2. 알림 있음 - 시간 설정 O
   notificationPaused, // 3. 알림 있음 - 시간 설정 O - 알림 off 상태
+  notificationCompleted, // 4. 알림 완료 (시간이 지나서 알림이 완료된 상태)
 }
 
 class MiruTask {
@@ -13,6 +14,7 @@ class MiruTask {
   bool hasNotification;
   bool isEnabled; // 알림 활성화 여부 (토글)
   bool isCompleted; // 알림 완료 여부
+  DateTime? completedAt; // 완료 처리 시점
 
   MiruTask({
     required this.id,
@@ -23,6 +25,7 @@ class MiruTask {
     required this.hasNotification,
     this.isEnabled = true,
     this.isCompleted = false,
+    this.completedAt,
   });
 
   // JSON 변환 메서드
@@ -36,6 +39,7 @@ class MiruTask {
       'hasNotification': hasNotification,
       'isEnabled': isEnabled,
       'isCompleted': isCompleted,
+      'completedAt': completedAt?.toIso8601String(),
     };
   }
 
@@ -52,6 +56,9 @@ class MiruTask {
       hasNotification: json['hasNotification'],
       isEnabled: json['isEnabled'] ?? true, // 기본값 true
       isCompleted: json['isCompleted'] ?? false, // 기본값 false
+      completedAt: json['completedAt'] != null
+          ? DateTime.parse(json['completedAt'])
+          : null, // 기존 데이터 호환성을 위해 null 허용
     );
   }
 
@@ -64,12 +71,20 @@ class MiruTask {
 
     // 완료된 작업은 히스토리로 이동하므로 여기서는 처리하지 않음
 
+    // 4. 알림 완료 상태 (알림 시간이 지났고 isEnabled가 false인 경우)
+    if (notificationTime != null && !isEnabled) {
+      final now = DateTime.now();
+      if (notificationTime!.isBefore(now)) {
+        return MiruTaskStatus.notificationCompleted;
+      }
+    }
+
     // 2. 알림 있음 - 시간 설정 O - isEnabled가 true (재설정된 경우도 포함)
     if (isEnabled) {
       return MiruTaskStatus.notificationScheduled;
     }
 
-    // 3. 알림 있음 - 시간 설정 O - 알림 off 상태 - isEnabled가 false
+    // 3. 알림 있음 - 시간 설정 O - 알림 off 상태 - isEnabled가 false (시간이 아직 안 지남)
     return MiruTaskStatus.notificationPaused;
   }
 
@@ -84,6 +99,9 @@ class MiruTask {
 
       case MiruTaskStatus.notificationPaused:
         return _getTimeText();
+
+      case MiruTaskStatus.notificationCompleted:
+        return '알림 완료';
     }
   }
 
