@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../app.dart';
+import '../../../services/first_run_service.dart';
+import '../guide/guide_view.dart';
 
 class SplashView extends StatefulWidget {
   const SplashView({super.key});
@@ -37,7 +39,7 @@ class _SplashViewState extends State<SplashView>
   void _navigateAfterDelay() async {
     await Future.delayed(const Duration(seconds: 2));
     if (mounted) {
-      _navigateToMainApp();
+      await _navigateToNextScreen();
     }
   }
 
@@ -47,10 +49,21 @@ class _SplashViewState extends State<SplashView>
     super.dispose();
   }
 
-  void _navigateToMainApp() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const MirugangApp()),
-    );
+  Future<void> _navigateToNextScreen() async {
+    // 최초 실행 여부 확인
+    final isFirstRun = await FirstRunService.isFirstRun();
+
+    if (isFirstRun) {
+      // 최초 실행이면 가이드 페이지로 이동
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const GuideView()),
+      );
+    } else {
+      // 최초 실행이 아니면 바로 메인 앱으로 이동
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const MirugangApp()),
+      );
+    }
   }
 
   @override
