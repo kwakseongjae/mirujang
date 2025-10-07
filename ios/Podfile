@@ -40,4 +40,26 @@ post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
   end
+
+  # Embed SDK privacy manifests into commonly used third-party SDK pods that lack them
+  pods_project = installer.pods_project
+  privacy_dir = File.join(__dir__, 'PrivacyManifests')
+  sdk_pods = ['device_info_plus', 'package_info_plus']
+
+  sdk_pods.each do |pod_name|
+    pod_target = pods_project.targets.find { |t| t.name == pod_name }
+    next unless pod_target
+
+    manifest_filename = "#{pod_name}_PrivacyInfo.xcprivacy"
+    manifest_path = File.join(privacy_dir, manifest_filename)
+    next unless File.exist?(manifest_path)
+
+    group = pods_project.main_group.find_subpath('PrivacyManifests', true)
+    file_ref = group.files.find { |f| f.path == manifest_path }
+    file_ref ||= group.new_file(manifest_path)
+
+    unless pod_target.resources_build_phase.files_references.include?(file_ref)
+      pod_target.resources_build_phase.add_file_reference(file_ref, true)
+    end
+  end
 end
