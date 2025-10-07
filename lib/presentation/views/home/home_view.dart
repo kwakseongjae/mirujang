@@ -69,7 +69,7 @@ class SpeechBubblePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = isDarkMode ? Colors.white : const Color(0xFFEAD49B)
+      ..color = isDarkMode ? Colors.white : const Color(0xFFF4B41F)
       ..style = PaintingStyle.fill;
 
     final path = Path();
@@ -855,7 +855,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                                           Theme.of(context).brightness ==
                                               Brightness.dark
                                           ? Colors.black87
-                                          : Colors.black87,
+                                          : Colors.grey[800],
                                     ),
                                   ),
                                 ),
@@ -1203,11 +1203,9 @@ class _TimeSettingModalState extends State<TimeSettingModal> {
 
                 if (exactTime.isAtSameMomentAs(nowNormalized) ||
                     exactTime.isBefore(nowNormalized)) {
-                  // 현재 시간과 같거나 이전이면 1분 후로 설정
-                  final oneMinuteLater = nowNormalized.add(
-                    const Duration(minutes: 1),
-                  );
-                  widget.onTimeSet(oneMinuteLater);
+                  // 현재 시간과 같거나 과거면 다음날 같은 시각으로 롤오버
+                  final nextDayTime = exactTime.add(const Duration(days: 1));
+                  widget.onTimeSet(nextDayTime);
                 } else {
                   widget.onTimeSet(exactTime);
                 }

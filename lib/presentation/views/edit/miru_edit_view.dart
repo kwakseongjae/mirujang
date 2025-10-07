@@ -345,8 +345,8 @@ class _MiruEditViewState extends State<MiruEditView>
 
         if (selectedDateTime.isAtSameMomentAs(nowNormalized) ||
             selectedDateTime.isBefore(nowNormalized)) {
-          // 현재 시간과 같거나 이전이면 1분 후로 설정
-          notificationTime = nowNormalized.add(const Duration(minutes: 1));
+          // 현재 시각과 같거나 과거면 다음날 같은 시각으로 롤오버
+          notificationTime = selectedDateTime.add(const Duration(days: 1));
         } else {
           notificationTime = selectedDateTime;
         }

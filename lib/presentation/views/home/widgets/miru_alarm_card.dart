@@ -108,22 +108,7 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
   }
 
   void _handleToggle() {
-    // 시간 설정 모달이 필요한 경우에는 토글 상태를 변경하지 않음
-    if (widget.requiresTimeModal) {
-      widget.onToggle?.call();
-      return;
-    }
-
-    setState(() {
-      _isToggled = !_isToggled;
-    });
-
-    if (_isToggled) {
-      _toggleAnimationController.forward();
-    } else {
-      _toggleAnimationController.reverse();
-    }
-
+    // 토글 최종 확정은 부모가 결정하도록 위임 (취소 시 원복 문제 방지)
     widget.onToggle?.call();
   }
 

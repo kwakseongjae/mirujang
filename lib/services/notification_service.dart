@@ -196,8 +196,6 @@ class NotificationService {
       scheduledTime,
       notificationDetails,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
       payload: task.id,
       // matchDateTimeComponents 제거 - 일회성 알림이므로 정확한 시간에만 울림
     );
