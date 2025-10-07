@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'dart:io';
 import '../models/miru_task.dart';
 import '../utils/logger.dart';
 
@@ -42,8 +45,14 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
-    // iOS 알림 권한 요청
-    await requestPermissions();
+    // 최초 실행이 아닌 경우에만 시스템 설정과 동기화
+    // 최초 실행은 가이드에서 처리
+    final prefs = await SharedPreferences.getInstance();
+    final isFirstRun = prefs.getBool('is_first_run') ?? true;
+
+    if (!isFirstRun) {
+      await syncWithSystemSettings();
+    }
   }
 
   // 알림 권한 요청
@@ -59,6 +68,49 @@ class NotificationService {
           IOSFlutterLocalNotificationsPlugin
         >()
         ?.requestPermissions(alert: true, badge: true, sound: true);
+  }
+
+  // 시스템 알림 권한 상태 확인
+  Future<bool> isSystemNotificationEnabled() async {
+    final androidPlugin = _notifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+
+    final iosPlugin = _notifications
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
+
+    if (androidPlugin != null) {
+      // Android의 경우
+      final result = await androidPlugin.areNotificationsEnabled();
+      return result ?? false;
+    } else if (iosPlugin != null) {
+      // iOS의 경우
+      final result = await iosPlugin.checkPermissions();
+      return result?.isEnabled ?? false;
+    }
+
+    return false;
+  }
+
+  // 시스템 알림 설정과 인앱 설정 동기화
+  Future<void> syncWithSystemSettings() async {
+    final systemEnabled = await isSystemNotificationEnabled();
+
+    // 시스템에서 비활성화된 경우 인앱 설정도 비활성화
+    if (!systemEnabled && _isNotificationEnabled) {
+      _isNotificationEnabled = false;
+      await _saveNotificationSettings();
+      Logger.info('Notification settings synced with system: disabled');
+    }
+    // 시스템에서 활성화된 경우 인앱 설정도 활성화
+    else if (systemEnabled && !_isNotificationEnabled) {
+      _isNotificationEnabled = true;
+      await _saveNotificationSettings();
+      Logger.info('Notification settings synced with system: enabled');
+    }
   }
 
   // 알림 탭 처리
@@ -231,6 +283,9 @@ class NotificationService {
     if (!enabled) {
       // 알림 비활성화 시 모든 예약된 알림 취소
       await cancelAllNotifications();
+    } else {
+      // 알림 활성화 시 시스템 권한도 요청
+      await requestPermissions();
     }
   }
 
@@ -242,5 +297,55 @@ class NotificationService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_notificationEnabledKey);
     _isNotificationEnabled = true;
+  }
+
+  // 시스템 알림 설정으로 이동
+  Future<void> openSystemNotificationSettings() async {
+    if (Platform.isAndroid) {
+      // Android의 경우
+      final androidPlugin = _notifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+
+      if (androidPlugin != null) {
+        await androidPlugin.requestNotificationsPermission();
+      }
+    } else if (Platform.isIOS) {
+      // iOS의 경우 - URL 스킴을 사용하여 시스템 설정으로 이동
+      try {
+        // iOS 설정 앱의 알림 섹션으로 직접 이동
+        const url = 'app-settings:';
+        if (await canLaunchUrl(Uri.parse(url))) {
+          await launchUrl(Uri.parse(url));
+        } else {
+          throw Exception('Cannot launch app settings');
+        }
+      } catch (e) {
+        Logger.error('Failed to open iOS settings via URL scheme', error: e);
+
+        // 대체 방법: 플러그인 메서드 사용
+        try {
+          await const MethodChannel(
+            'flutter.io/plugins/flutter_local_notifications',
+          ).invokeMethod('openAppNotificationSettings');
+        } catch (e2) {
+          Logger.error('Failed to open iOS settings via plugin', error: e2);
+
+          // 최후의 수단: 권한 요청만
+          final iosPlugin = _notifications
+              .resolvePlatformSpecificImplementation<
+                IOSFlutterLocalNotificationsPlugin
+              >();
+          if (iosPlugin != null) {
+            await iosPlugin.requestPermissions(
+              alert: true,
+              badge: true,
+              sound: true,
+            );
+          }
+        }
+      }
+    }
   }
 }
