@@ -41,6 +41,10 @@ dependencies:
   shared_preferences: ^2.3.2
   flutter_local_notifications: ^17.2.4
   flutter_launcher_icons: ^0.14.4
+  url_launcher: ^6.3.1
+  flutter_email_sender: ^6.0.1
+  device_info_plus: ^9.0.3
+  package_info_plus: ^4.1.0
 
 dev_dependencies:
   flutter_test:
@@ -67,6 +71,7 @@ flutter:
   assets:
     - assets/images/
     - assets/images/mode/
+    - assets/images/guide/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
