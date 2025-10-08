@@ -832,7 +832,7 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                             ),
                             // 말풍선
                             Positioned(
-                              top: 25,
+                              top: _tasks.isEmpty ? 10.0 : 20.0,
                               child: CustomPaint(
                                 painter: SpeechBubblePainter(
                                   isDarkMode:
