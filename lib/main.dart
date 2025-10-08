@@ -31,7 +31,7 @@ class SplashApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Mirugang',
+      title: 'Mirujang',
       theme: ThemeData(
         useMaterial3: true,
         brightness: Brightness.light,
@@ -69,7 +69,7 @@ class _SplashScreenState extends State<SplashScreen> {
     _checkAppLaunch();
   }
 
-  _checkAppLaunch() async {
+  Future<void> _checkAppLaunch() async {
     final prefs = await SharedPreferences.getInstance();
     final isFirstLaunch = prefs.getBool('is_first_launch') ?? true;
 

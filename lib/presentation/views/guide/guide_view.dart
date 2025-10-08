@@ -82,7 +82,7 @@ class _GuideViewState extends State<GuideView> with TickerProviderStateMixin {
       // 홈 화면으로 이동
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MirugangApp()),
+          MaterialPageRoute(builder: (context) => const MirujangApp()),
         );
       }
     }

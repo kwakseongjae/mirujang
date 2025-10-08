@@ -4,14 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'presentation/views/main/main_navigation.dart';
 import 'services/theme_service.dart';
 
-class MirugangApp extends StatefulWidget {
-  const MirugangApp({super.key});
+class MirujangApp extends StatefulWidget {
+  const MirujangApp({super.key});
 
   @override
-  State<MirugangApp> createState() => _MirugangAppState();
+  State<MirujangApp> createState() => _MirujangAppState();
 }
 
-class _MirugangAppState extends State<MirugangApp> with WidgetsBindingObserver {
+class _MirujangAppState extends State<MirujangApp> with WidgetsBindingObserver {
   final ThemeService _themeService = ThemeService();
 
   @override

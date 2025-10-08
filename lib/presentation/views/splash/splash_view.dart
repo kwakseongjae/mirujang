@@ -61,7 +61,7 @@ class _SplashViewState extends State<SplashView>
     } else {
       // 최초 실행이 아니면 바로 메인 앱으로 이동
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MirugangApp()),
+        MaterialPageRoute(builder: (context) => const MirujangApp()),
       );
     }
   }
