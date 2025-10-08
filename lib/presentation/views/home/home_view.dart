@@ -762,51 +762,54 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                 child: Column(
                   children: [
                     // 상단 이미지 영역 (화면 높이의 1/3, 너비 full)
-                    Container(
-                      height: imageHeight,
-                      width: double.infinity,
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? null // 다크모드에서는 그라데이션 사용
-                            : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
-                        gradient:
-                            Theme.of(context).brightness == Brightness.dark
-                            ? const LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  Color(0xFF2C2C2E), // 상단 (약간 밝음)
-                                  Color(0xFF1C1C1E), // 하단 (기본 배경)
-                                ],
-                              )
-                            : null,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFF3A3A3C).withOpacity(0.3)
-                              : const Color(0xFFE0E0E0).withOpacity(0.8),
-                          width: 0.5,
+                    GestureDetector(
+                      onTap: () {
+                        if (_tasks.isEmpty) {
+                          _createHearts();
+                        } else {
+                          _createZzzIcons();
+                        }
+                      },
+                      child: Container(
+                        height: imageHeight,
+                        width: double.infinity,
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
                         ),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // 미루 이미지
-                            GestureDetector(
-                              onTap: () {
-                                if (_tasks.isEmpty) {
-                                  _createHearts();
-                                } else {
-                                  _createZzzIcons();
-                                }
-                              },
-                              child: Image.asset(
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? null // 다크모드에서는 그라데이션 사용
+                              : const Color(
+                                  0xFFF7FAFC,
+                                ), // 라이트모드에서는 pale slate 배경
+                          gradient:
+                              Theme.of(context).brightness == Brightness.dark
+                              ? const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Color(0xFF2C2C2E), // 상단 (약간 밝음)
+                                    Color(0xFF1C1C1E), // 하단 (기본 배경)
+                                  ],
+                                )
+                              : null,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF3A3A3C).withOpacity(0.3)
+                                : const Color(0xFFE0E0E0).withOpacity(0.8),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // 미루 이미지
+                              Image.asset(
                                 (_isLoading || _tasks.isEmpty)
                                     ? 'assets/images/miru_standing.png'
                                     : 'assets/images/miru_lazy.png',
@@ -829,39 +832,39 @@ class _HomeViewState extends State<HomeView> with TickerProviderStateMixin {
                                   );
                                 },
                               ),
-                            ),
-                            // 말풍선
-                            Positioned(
-                              top: _tasks.isEmpty ? 10.0 : 20.0,
-                              child: CustomPaint(
-                                painter: SpeechBubblePainter(
-                                  isDarkMode:
-                                      Theme.of(context).brightness ==
-                                      Brightness.dark,
-                                ),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 8,
+                              // 말풍선
+                              Positioned(
+                                top: _tasks.isEmpty ? 10.0 : 20.0,
+                                child: CustomPaint(
+                                  painter: SpeechBubblePainter(
+                                    isDarkMode:
+                                        Theme.of(context).brightness ==
+                                        Brightness.dark,
                                   ),
-                                  child: Text(
-                                    _tasks.isEmpty
-                                        ? '아직 미룬 일이 하나도 없어!'
-                                        : '벌써 ${_tasks.length}개나 할 일이 밀렸어...',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color:
-                                          Theme.of(context).brightness ==
-                                              Brightness.dark
-                                          ? Colors.black87
-                                          : Colors.grey[800],
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                    child: Text(
+                                      _tasks.isEmpty
+                                          ? '아직 미룬 일이 하나도 없어!'
+                                          : '벌써 ${_tasks.length}개나 할 일이 밀렸어...',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color:
+                                            Theme.of(context).brightness ==
+                                                Brightness.dark
+                                            ? Colors.black87
+                                            : Colors.grey[800],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
