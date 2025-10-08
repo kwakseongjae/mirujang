@@ -50,7 +50,10 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
   static const double _buttonSpacing = 6.0; // 버튼 사이 거리
   static const double _totalSwipeWidth =
       166.0; // 전체 스와이프 너비 (완료 + 삭제 + 거리 + padding)
-  static const double _threshold = 40.0; // 자동 완료 임계값
+  static const double _threshold = 25.0; // 자동 완료 임계값 (더 관대하게)
+  static const double _velocityThreshold = -300.0; // 속도 임계값 (더 관대하게)
+  static const double _closeThreshold = 15.0; // 되돌리기 임계값 (더 관대하게)
+  static const double _closeVelocityThreshold = 200.0; // 되돌리기 속도 임계값
 
   @override
   void initState() {
@@ -69,15 +72,15 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
       ),
     );
 
-    // 스프링 애니메이션 컨트롤러
+    // 스프링 애니메이션 컨트롤러 (절제된 스프링 효과)
     _springAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 450),
       vsync: this,
     );
     _springAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _springAnimationController,
-        curve: Curves.elasticOut,
+        curve: Curves.easeOutBack,
       ),
     );
 
@@ -115,46 +118,100 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
   void _handleDragStart(DragStartDetails details) {
     // 드래그 시작 시 애니메이션 정지
     _isDragging = false;
+    // 드래그 시작 시 가벼운 햅틱 피드백
+    HapticFeedback.selectionClick();
   }
 
   void _handleDragUpdate(DragUpdateDetails details) {
     // 드래그가 시작되었는지 확인 (임계값 이상 움직임)
-    if (!_isDragging && details.delta.dx.abs() > 5) {
+    if (!_isDragging && details.delta.dx.abs() > 3) {
       _isDragging = true;
     }
 
     if (_isDragging) {
       setState(() {
         // 왼쪽으로 드래그할 때만 음수 값, 오른쪽으로는 0 이상으로 제한
-        _dragOffset = (_dragOffset + details.delta.dx).clamp(
-          -_totalSwipeWidth,
-          0.0,
-        );
+        // 더 부드러운 드래그를 위해 감쇠 효과 적용
+        final newOffset = _dragOffset + details.delta.dx;
+        _dragOffset = newOffset.clamp(-_totalSwipeWidth, 0.0);
+
+        // 스와이프 임계값에 도달했을 때 햅틱 피드백
+        final isCurrentlyOpen = _dragOffset.abs() > _totalSwipeWidth * 0.5;
+
+        if (!isCurrentlyOpen) {
+          // 좌측 스와이프 (열기) 임계값
+          if (_dragOffset.abs() > _threshold &&
+              _dragOffset.abs() < _threshold + 10) {
+            HapticFeedback.lightImpact();
+          }
+        } else {
+          // 우측 스와이프 (되돌리기) 임계값
+          if (_dragOffset.abs() < _closeThreshold + 10 &&
+              _dragOffset.abs() > _closeThreshold) {
+            HapticFeedback.lightImpact();
+          }
+        }
       });
     }
   }
 
   void _handleDragEnd(DragEndDetails details) {
-    // 드래그 속도와 위치를 고려한 자동 완료 로직
     final velocity = details.velocity.pixelsPerSecond.dx;
-    final shouldComplete = _dragOffset.abs() > _threshold || velocity < -500;
+    final isCurrentlyOpen = _dragOffset.abs() > _totalSwipeWidth * 0.5;
 
-    if (shouldComplete) {
-      // 완전히 열림 - 스프링 애니메이션 적용
-      setState(() {
-        _dragOffset = -_totalSwipeWidth;
-      });
-      _springAnimationController.forward();
+    if (isCurrentlyOpen) {
+      // 스와이프가 열린 상태에서 우측으로 드래그 (되돌리기)
+      final shouldClose =
+          _dragOffset.abs() < _closeThreshold ||
+          velocity > _closeVelocityThreshold;
+
+      if (shouldClose) {
+        // 원래 위치로 복원 - 스프링 애니메이션 적용
+        HapticFeedback.lightImpact(); // 되돌리기 시 가벼운 햅틱 피드백
+        _animateToPosition(0.0);
+      } else {
+        // 다시 열린 상태로 유지
+        _animateToPosition(-_totalSwipeWidth);
+      }
     } else {
-      // 원래 위치로 복원 - 스프링 애니메이션 적용
-      setState(() {
-        _dragOffset = 0.0;
-      });
-      _springAnimationController.reverse();
+      // 스와이프가 닫힌 상태에서 좌측으로 드래그 (열기)
+      final shouldComplete =
+          _dragOffset.abs() > _threshold || velocity < _velocityThreshold;
+
+      if (shouldComplete) {
+        // 완전히 열림 - 스프링 애니메이션 적용
+        HapticFeedback.mediumImpact(); // 완료 시 햅틱 피드백
+        _animateToPosition(-_totalSwipeWidth);
+      } else {
+        // 원래 위치로 복원 - 스프링 애니메이션 적용
+        _animateToPosition(0.0);
+      }
     }
 
     // 드래그 상태 초기화
     _isDragging = false;
+  }
+
+  // 스프링 애니메이션으로 위치 이동
+  void _animateToPosition(double targetOffset) {
+    final startOffset = _dragOffset;
+    final distance = targetOffset - startOffset;
+
+    _springAnimationController.reset();
+    _springAnimationController.forward().then((_) {
+      setState(() {
+        _dragOffset = targetOffset;
+      });
+    });
+
+    // 애니메이션 중간값으로 부드러운 이동 구현
+    _springAnimationController.addListener(() {
+      if (_springAnimationController.isAnimating) {
+        setState(() {
+          _dragOffset = startOffset + (distance * _springAnimation.value);
+        });
+      }
+    });
   }
 
   void _handleDelete() {
@@ -452,11 +509,8 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
   }
 
   void _resetSwipeState() {
-    setState(() {
-      _dragOffset = 0.0;
-      _isDragging = false;
-    });
-    _springAnimationController.reverse();
+    _isDragging = false;
+    _animateToPosition(0.0);
   }
 
   @override
@@ -529,181 +583,175 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
               ),
             ),
           ),
-          // 메인 카드 - 드래그에 따라 이동
-          AnimatedBuilder(
-            animation: _springAnimation,
-            builder: (context, child) {
-              return Transform.translate(
-                offset: Offset(_dragOffset, 0),
-                child: GestureDetector(
-                  onTap: () {
-                    // 스와이프 상태가 있으면 리셋 후 상세 페이지로 이동
-                    if (_dragOffset != 0.0) {
-                      _resetSwipeState();
-                      // 애니메이션 완료 후 상세 페이지로 이동
-                      Future.delayed(const Duration(milliseconds: 200), () {
-                        widget.onTap?.call();
-                      });
-                    } else {
-                      // 토글 버튼이 아닌 영역에서만 클릭 처리
-                      widget.onTap?.call();
-                    }
-                  },
-                  onLongPress: _handleLongPress, // 롱 프레스 핸들러 추가
-                  onHorizontalDragStart: _handleDragStart,
-                  onHorizontalDragUpdate: _handleDragUpdate,
-                  onHorizontalDragEnd: _handleDragEnd,
-                  child: Container(
-                    width: double.infinity,
-                    height: 80,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFF1E1E1E)
-                          : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? const Color(0xFF3A3A3C).withOpacity(0.3)
-                            : const Color(0xFFE0E0E0).withOpacity(0.8),
-                        width: 0.5,
+          // 메인 카드 - 드래그에 따라 이동 (스프링 애니메이션 적용)
+          Transform.translate(
+            offset: Offset(_dragOffset, 0),
+            child: GestureDetector(
+              onTap: () {
+                // 스와이프 상태가 있으면 리셋 후 상세 페이지로 이동
+                if (_dragOffset != 0.0) {
+                  _resetSwipeState();
+                  // 애니메이션 완료 후 상세 페이지로 이동
+                  Future.delayed(const Duration(milliseconds: 200), () {
+                    widget.onTap?.call();
+                  });
+                } else {
+                  // 토글 버튼이 아닌 영역에서만 클릭 처리
+                  widget.onTap?.call();
+                }
+              },
+              onLongPress: _handleLongPress, // 롱 프레스 핸들러 추가
+              onHorizontalDragStart: _handleDragStart,
+              onHorizontalDragUpdate: _handleDragUpdate,
+              onHorizontalDragEnd: _handleDragEnd,
+              child: Container(
+                width: double.infinity,
+                height: 80,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? const Color(0xFF1E1E1E)
+                      : const Color(0xFFF7FAFC), // 라이트모드에서는 pale slate 배경
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF3A3A3C).withOpacity(0.3)
+                        : const Color(0xFFE0E0E0).withOpacity(0.8),
+                    width: 0.5,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    // 좌측: 미루기 내용과 마감일
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // 미루기 타이틀 (1줄로 truncate)
+                          Text(
+                            widget.title,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          // 마감일 (가운데선 적용)
+                          Text(
+                            widget.deadline,
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withOpacity(0.6),
+                              decoration: widget.needsStrikethrough
+                                  ? TextDecoration.lineThrough
+                                  : TextDecoration.none,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
+                    const SizedBox(width: 12),
+                    // 우측: 토글 버튼과 더보기 버튼
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // 좌측: 미루기 내용과 마감일
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // 미루기 타이틀 (1줄로 truncate)
-                              Text(
-                                widget.title,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface,
+                        // 커스텀 토글 버튼
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: _handleToggle,
+                          child: AnimatedBuilder(
+                            animation: _toggleAnimation,
+                            builder: (context, child) {
+                              return Container(
+                                width: 50,
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(15),
+                                  color: _isToggled
+                                      ? const Color(
+                                          0xFFF4B41F,
+                                        ) // #F4B41F 색상 (켜짐)
+                                      : const Color(
+                                          0xFFD0D0D0,
+                                        ), // 더 어두운 회색 배경 (꺼짐)
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 4),
-                              // 마감일 (가운데선 적용)
-                              Text(
-                                widget.deadline,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withOpacity(0.6),
-                                  decoration: widget.needsStrikethrough
-                                      ? TextDecoration.lineThrough
-                                      : TextDecoration.none,
+                                child: Stack(
+                                  children: [
+                                    // 토글 원
+                                    AnimatedPositioned(
+                                      duration: const Duration(
+                                        milliseconds: 200,
+                                      ),
+                                      curve: Curves.easeInOut,
+                                      left: _isToggled ? 22 : 2,
+                                      top: 2,
+                                      child: Container(
+                                        width: 26,
+                                        height: 26,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: _isToggled
+                                              ? Colors
+                                                    .white // 하얀색 원 (켜짐)
+                                              : const Color(
+                                                  0xFFF5F5F5,
+                                                ), // 밝은 회색 원 (꺼짐)
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(
+                                                0.1,
+                                              ),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                              );
+                            },
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        // 우측: 토글 버튼과 더보기 버튼
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // 커스텀 토글 버튼
-                            GestureDetector(
-                              behavior: HitTestBehavior.opaque,
-                              onTap: _handleToggle,
-                              child: AnimatedBuilder(
-                                animation: _toggleAnimation,
-                                builder: (context, child) {
-                                  return Container(
-                                    width: 50,
-                                    height: 30,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(15),
-                                      color: _isToggled
-                                          ? const Color(
-                                              0xFFF4B41F,
-                                            ) // #F4B41F 색상 (켜짐)
-                                          : const Color(
-                                              0xFFD0D0D0,
-                                            ), // 더 어두운 회색 배경 (꺼짐)
-                                    ),
-                                    child: Stack(
-                                      children: [
-                                        // 토글 원
-                                        AnimatedPositioned(
-                                          duration: const Duration(
-                                            milliseconds: 200,
-                                          ),
-                                          curve: Curves.easeInOut,
-                                          left: _isToggled ? 22 : 2,
-                                          top: 2,
-                                          child: Container(
-                                            width: 26,
-                                            height: 26,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: _isToggled
-                                                  ? Colors
-                                                        .white // 하얀색 원 (켜짐)
-                                                  : const Color(
-                                                      0xFFF5F5F5,
-                                                    ), // 밝은 회색 원 (꺼짐)
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: Colors.black
-                                                      .withOpacity(0.1),
-                                                  blurRadius: 4,
-                                                  offset: const Offset(0, 2),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
+                        const SizedBox(width: 8),
+                        // 더보기 버튼 (세로 점 세개)
+                        GestureDetector(
+                          onTap: _showOptionsModal,
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: Center(
+                              child: Icon(
+                                Icons.more_vert,
+                                size: 20,
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            // 더보기 버튼 (세로 점 세개)
-                            GestureDetector(
-                              onTap: _showOptionsModal,
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: Center(
-                                  child: Icon(
-                                    Icons.more_vert,
-                                    size: 20,
-                                    color:
-                                        Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? Colors.white
-                                        : Colors.black,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
-              );
-            },
+              ),
+            ),
           ),
         ],
       ),
