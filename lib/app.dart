@@ -38,7 +38,7 @@ class _MirujangAppState extends State<MirujangApp> with WidgetsBindingObserver {
     }
   }
 
-  _recordAppCloseTime() async {
+  Future<void> _recordAppCloseTime() async {
     final prefs = await SharedPreferences.getInstance();
     final currentTime = DateTime.now().millisecondsSinceEpoch;
     await prefs.setInt('last_app_close_time', currentTime);
