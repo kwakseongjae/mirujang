@@ -47,9 +47,9 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
   bool _isDragging = false;
   static const double _deleteButtonWidth = 60.0; // 휴지통 컨테이너 너비
   static const double _completeButtonWidth = 60.0; // 완료 버튼 컨테이너 너비
-  static const double _buttonSpacing = 6.0; // 버튼 사이 거리
+  static const double _buttonSpacing = 3.0; // 버튼 사이 거리
   static const double _totalSwipeWidth =
-      166.0; // 전체 스와이프 너비 (완료 + 삭제 + 거리 + padding)
+      146.0; // 전체 스와이프 너비 (완료 + 삭제 + 거리 + padding)
   static const double _threshold = 25.0; // 자동 완료 임계값 (더 관대하게)
   static const double _velocityThreshold = -300.0; // 속도 임계값 (더 관대하게)
   static const double _closeThreshold = 15.0; // 되돌리기 임계값 (더 관대하게)
@@ -522,7 +522,7 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
           // 배경 버튼들 (완료 + 삭제)
           Positioned.fill(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.only(right: 10),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
