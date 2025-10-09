@@ -345,8 +345,8 @@ class _MiruEditViewState extends State<MiruEditView>
 
         if (selectedDateTime.isAtSameMomentAs(nowNormalized) ||
             selectedDateTime.isBefore(nowNormalized)) {
-          // 현재 시각과 같거나 과거면 다음날 같은 시각으로 롤오버
-          notificationTime = selectedDateTime.add(const Duration(days: 1));
+          // 현재 시각과 같거나 과거면 1분 후로 설정 (편의 기능)
+          notificationTime = nowNormalized.add(const Duration(minutes: 1));
         } else {
           notificationTime = selectedDateTime;
         }
@@ -395,6 +395,7 @@ class _MiruEditViewState extends State<MiruEditView>
       child: Stack(
         children: [
           Scaffold(
+            resizeToAvoidBottomInset: false,
             appBar: AppBar(
               backgroundColor: Colors.transparent,
               elevation: 0,
@@ -475,6 +476,7 @@ class _MiruEditViewState extends State<MiruEditView>
                       child: TextField(
                         controller: _titleController,
                         maxLength: 30,
+                        textInputAction: TextInputAction.done,
                         decoration: InputDecoration(
                           hintText: '미룰 일을 입력해주세요 (30자 이내)',
                           hintStyle: TextStyle(
@@ -533,6 +535,7 @@ class _MiruEditViewState extends State<MiruEditView>
                         controller: _memoController,
                         maxLength: 300,
                         maxLines: 4,
+                        textInputAction: TextInputAction.done,
                         style: TextStyle(
                           fontSize: 16,
                           color: Theme.of(context).brightness == Brightness.dark

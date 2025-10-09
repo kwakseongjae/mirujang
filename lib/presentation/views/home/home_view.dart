@@ -1206,9 +1206,11 @@ class _TimeSettingModalState extends State<TimeSettingModal> {
 
                 if (exactTime.isAtSameMomentAs(nowNormalized) ||
                     exactTime.isBefore(nowNormalized)) {
-                  // 현재 시간과 같거나 과거면 다음날 같은 시각으로 롤오버
-                  final nextDayTime = exactTime.add(const Duration(days: 1));
-                  widget.onTimeSet(nextDayTime);
+                  // 현재 시각과 같거나 과거면 1분 후로 설정 (편의 기능)
+                  final nextMinuteTime = nowNormalized.add(
+                    const Duration(minutes: 1),
+                  );
+                  widget.onTimeSet(nextMinuteTime);
                 } else {
                   widget.onTimeSet(exactTime);
                 }
