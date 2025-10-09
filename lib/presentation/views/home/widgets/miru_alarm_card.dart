@@ -637,7 +637,7 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
                             widget.title,
                             style: TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
                               color: Theme.of(context).colorScheme.onSurface,
                             ),
                             maxLines: 1,
@@ -648,7 +648,7 @@ class _MiruAlarmCardState extends State<MiruAlarmCard>
                           Text(
                             widget.deadline,
                             style: TextStyle(
-                              fontSize: 15,
+                              fontSize: 14,
                               color: Theme.of(
                                 context,
                               ).colorScheme.onSurface.withOpacity(0.6),
