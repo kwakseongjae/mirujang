@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_email_sender/flutter_email_sender.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
 import 'theme_settings_view.dart';
 import '../../../services/notification_service.dart';
@@ -271,226 +271,284 @@ class _SettingsViewState extends State<SettingsView>
     );
   }
 
-  // 의견 보내기 다이얼로그
+  // 의견 카테고리 선택 다이얼로그
   void _showFeedbackDialog(BuildContext context) {
-    final TextEditingController feedbackController = TextEditingController();
+    String selectedCategory = '';
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.95, // 화면 가로의 95% 사용
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.65, // 최대 높이 80%
-          ),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF1C1C1E)
-                : Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 상단 헤더
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFF4B41F), Color(0xFFFFD700)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.95,
+            height: 460, // 고정 높이
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF1C1C1E)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
-                child: Column(
-                  children: [
-                    // 미루장 캐릭터 아이콘
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(30),
+              ],
+            ),
+            child: Stack(
+              children: [
+                // 상단 헤더
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    height: 140,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFF4B41F), Color(0xFFFFD700)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
-                      child: const Icon(
-                        Icons.favorite_rounded,
-                        color: Colors.white,
-                        size: 30,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      '미루장에게 말해주세요! 💬',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        fontFamily: 'Pretendard',
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(24),
+                        topRight: Radius.circular(24),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      '소중한 의견을 들려주세요',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white,
-                        fontFamily: 'Pretendard',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // 내용 영역
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // 의견 입력 (메인)
-                      const Text(
-                        '의견을 들려주세요',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'Pretendard',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: TextField(
-                          controller: feedbackController,
-                          maxLines: null,
-                          expands: true,
-                          textAlignVertical: TextAlignVertical.top,
-                          decoration: InputDecoration(
-                            hintText:
-                                '미루장을 더 좋게 만들어주세요!\n\n예시:\n• 새로운 기능이 필요해요\n• 버그가 있어요\n• 이런 기능이 좋았어요\n• UI 개선 아이디어\n• 기타 의견',
-                            hintStyle: TextStyle(
-                              color: Colors.grey[500],
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // 미루장 캐릭터 아이콘
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(
+                              Icons.favorite_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            '미루장에게 말해주세요! 💬',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
                               fontFamily: 'Pretendard',
-                              height: 1.4,
                             ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          const Text(
+                            '소중한 의견을 들려주세요',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white,
+                              fontFamily: 'Pretendard',
                             ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(
-                                color: Color(0xFFF4B41F),
-                                width: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // 내용 영역
+                Positioned(
+                  top: 140,
+                  left: 0,
+                  right: 0,
+                  height: 260,
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // 질문
+                        const Text(
+                          '어떤 의견을 보내려 하시나요?',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Pretendard',
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // 카테고리 선택 옵션들
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _buildRadioOption(
+                                '문의',
+                                selectedCategory,
+                                () => setState(() => selectedCategory = '문의'),
+                              ),
+                              _buildRadioOption(
+                                '버그',
+                                selectedCategory,
+                                () => setState(() => selectedCategory = '버그'),
+                              ),
+                              _buildRadioOption(
+                                '제안',
+                                selectedCategory,
+                                () => setState(() => selectedCategory = '제안'),
+                              ),
+                              _buildRadioOption(
+                                '칭찬',
+                                selectedCategory,
+                                () => setState(() => selectedCategory = '칭찬'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // 하단 버튼 영역
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    height: 80,
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+                    child: Row(
+                      children: [
+                        // 닫기 버튼
+                        Expanded(
+                          child: Container(
+                            height: 44,
+                            margin: const EdgeInsets.only(right: 8),
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: Colors.grey[400]!),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: const Text(
+                                '닫기',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Pretendard',
+                                ),
                               ),
                             ),
-                            contentPadding: const EdgeInsets.all(16),
                           ),
                         ),
-                      ),
-                    ],
+                        // 다음 버튼
+                        Expanded(
+                          child: Container(
+                            height: 44,
+                            margin: const EdgeInsets.only(left: 8),
+                            child: ElevatedButton(
+                              onPressed: selectedCategory.isEmpty
+                                  ? null
+                                  : () async {
+                                      Navigator.of(context).pop();
+                                      await _sendFeedbackWithCategory(
+                                        context,
+                                        selectedCategory,
+                                      );
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: selectedCategory.isEmpty
+                                    ? Colors.grey[400]
+                                    : const Color(0xFFF4B41F),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shadowColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: const Text(
+                                '다음',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'Pretendard',
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-
-              // 하단 버튼 영역
-              Container(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                child: Row(
-                  children: [
-                    // 취소 버튼
-                    Expanded(
-                      child: Container(
-                        height: 48,
-                        margin: const EdgeInsets.only(right: 8),
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: Colors.grey[400]!),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            '나중에',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'Pretendard',
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    // 전송 버튼
-                    Expanded(
-                      child: Container(
-                        height: 48,
-                        margin: const EdgeInsets.only(left: 8),
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            if (feedbackController.text.trim().isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('의견을 입력해주세요! 💭'),
-                                  backgroundColor: Color(0xFFFF9800),
-                                ),
-                              );
-                              return;
-                            }
-
-                            try {
-                              // 이메일 앱 열기
-                              await _openEmailApp(
-                                feedbackController.text.trim(),
-                                '', // 이메일 입력 제거
-                              );
-
-                              Navigator.of(context).pop();
-                              _showThankYouDialog(context);
-                            } catch (e) {
-                              // 에러 발생 시 이메일 앱 제한 안내 다이얼로그 표시
-                              _showEmailRestrictedDialog(context);
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFF4B41F),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shadowColor: Colors.transparent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            '보내기',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'Pretendard',
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // 라디오 옵션 위젯
+  Widget _buildRadioOption(
+    String title,
+    String selectedCategory,
+    VoidCallback onTap,
+  ) {
+    final isSelected = selectedCategory == title;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        child: Row(
+          children: [
+            // 라디오 버튼
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected
+                      ? const Color(0xFFF4B41F)
+                      : Colors.grey[400]!,
+                  width: 2,
+                ),
+                color: isSelected
+                    ? const Color(0xFFF4B41F)
+                    : Colors.transparent,
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check, color: Colors.white, size: 12)
+                  : null,
+            ),
+            const SizedBox(width: 12),
+
+            // 텍스트
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: isSelected
+                    ? const Color(0xFFF4B41F)
+                    : (Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black),
+                fontFamily: 'Pretendard',
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -877,181 +935,395 @@ class _SettingsViewState extends State<SettingsView>
     );
   }
 
-  // 이메일 앱 열기 메서드 (시뮬레이터 대응)
-  Future<void> _openEmailApp(String feedback, String email) async {
+  // 하단 시트 메일 작성 화면 (iOS 스타일) - 제거됨
+  /*
+    final TextEditingController subjectController = TextEditingController(
+      text: '미루장 앱 의견 - $category',
+    );
+    final TextEditingController bodyController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF1C1C1E)
+              : Colors.white,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          children: [
+            // 상단 핸들바
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[400],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+
+            // 헤더
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.email_rounded,
+                    color: Color(0xFF2196F3),
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '메일 작성',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            fontFamily: 'Pretendard',
+                          ),
+                        ),
+                        Text(
+                          '카테고리: $category',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontFamily: 'Pretendard',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.grey,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // 메일 내용 영역
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // 받는 사람
+                    const Text(
+                      '받는 사람',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Pretendard',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: const Text(
+                        'gkffhdnls13@gmail.com',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontFamily: 'Pretendard',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 제목
+                    const Text(
+                      '제목',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Pretendard',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: subjectController,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(
+                            color: Color(0xFF2196F3),
+                            width: 2,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.all(12),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 본문
+                    const Text(
+                      '내용',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Pretendard',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: bodyController,
+                        maxLines: null,
+                        expands: true,
+                        textAlignVertical: TextAlignVertical.top,
+                        decoration: InputDecoration(
+                          hintText: '여기에 의견을 자세히 작성해주세요...',
+                          hintStyle: TextStyle(
+                            color: Colors.grey[500],
+                            fontFamily: 'Pretendard',
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.grey[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF2196F3),
+                              width: 2,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.all(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // 하단 전송 버튼
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+              child: Row(
+                children: [
+                  // 취소 버튼
+                  Expanded(
+                    child: Container(
+                      height: 48,
+                      margin: const EdgeInsets.only(right: 8),
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.grey[400]!),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Text(
+                          '취소',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Pretendard',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // 전송 버튼 (종이비행기 아이콘)
+                  Container(
+                    height: 48,
+                    margin: const EdgeInsets.only(left: 8),
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        if (bodyController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('의견을 입력해주세요! 💭'),
+                              backgroundColor: Color(0xFFFF9800),
+                            ),
+                          );
+                          return;
+                        }
+
+                        try {
+                          // flutter_email_sender를 사용하여 이메일 전송
+                          await _sendEmailWithFlutterEmailSender(
+                            subjectController.text,
+                            bodyController.text,
+                            '',
+                          );
+
+                          Navigator.of(context).pop();
+                          _showThankYouDialog(context);
+                        } catch (e) {
+                          Navigator.of(context).pop();
+                          _showEmailErrorDialog(context, e.toString());
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2196F3),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      icon: const Icon(Icons.send_rounded, size: 18),
+                      label: const Text(
+                        '전송',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Pretendard',
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  */
+
+  // 카테고리별 의견 전송
+  Future<void> _sendFeedbackWithCategory(
+    BuildContext context,
+    String category,
+  ) async {
     try {
-      // 앱 정보 가져오기
       final appInfo = await _getAppInfo();
       final deviceInfo = await _getDeviceInfo();
 
-      // 이메일 본문 생성
-      final emailBody = _formatEmailBody(feedback, email, appInfo, deviceInfo);
-
-      // mailto URL로 이메일 앱 열기
-      final Uri emailUri = Uri(
-        scheme: 'mailto',
-        path: 'gkffhdnls13@gmail.com',
-        query: _encodeQueryParameters({
-          'subject': '미루장 앱 의견 - ${DateTime.now().toString().split(' ')[0]}',
-          'body': emailBody,
-        }),
+      // 카테고리별 이메일 내용 생성
+      String emailBody = _generateCategoryEmailBody(
+        category,
+        appInfo,
+        deviceInfo,
       );
 
-      print('이메일 URI: $emailUri'); // 디버깅용
+      final Email email = Email(
+        body: emailBody,
+        subject: '미루장 앱 $category - ${DateTime.now().toString().split(' ')[0]}',
+        recipients: ['gkffhdnls13@gmail.com'],
+        isHTML: false,
+      );
 
-      // 시뮬레이터인지 확인
-      final isSimulator = await _isSimulator();
-      print('시뮬레이터 여부: $isSimulator'); // 디버깅용
-
-      if (isSimulator) {
-        // 시뮬레이터에서는 이메일 앱이 없으므로 클립보드 복사
-        await _handleSimulatorEmail(emailBody);
-      } else {
-        // 실제 기기에서는 이메일 앱 열기 시도
-        if (await canLaunchUrl(emailUri)) {
-          await launchUrl(emailUri);
-          print('이메일 앱 열기 성공'); // 디버깅용
-        } else {
-          // 이메일 앱이 없는 경우 클립보드 복사
-          await _handleSimulatorEmail(emailBody);
-        }
-      }
+      await FlutterEmailSender.send(email);
+      _showThankYouDialog(context);
     } catch (e) {
-      print('이메일 앱 열기 실패: $e'); // 디버깅용
-      rethrow;
+      _showEmailErrorDialog(context, e.toString());
     }
   }
 
-  // 시뮬레이터 감지
-  Future<bool> _isSimulator() async {
-    try {
-      final deviceInfo = DeviceInfoPlugin();
-      if (Platform.isIOS) {
-        final iosInfo = await deviceInfo.iosInfo;
-        // 시뮬레이터는 model이 "Simulator"를 포함
-        return iosInfo.model.toLowerCase().contains('simulator');
-      }
-      return false;
-    } catch (e) {
-      return false;
+  // 카테고리별 이메일 내용 생성
+  String _generateCategoryEmailBody(
+    String category,
+    String appInfo,
+    String deviceInfo,
+  ) {
+    String categoryMessage = '';
+
+    switch (category) {
+      case '문의':
+        categoryMessage = '문의사항을 말씀해주세요.\n';
+        break;
+      case '버그':
+        categoryMessage = '발견하신 버그에 대해 자세히 설명해주세요.\n';
+        break;
+      case '제안':
+        categoryMessage = '개선사항이나 새로운 기능에 대한 제안을 말씀해주세요.\n';
+        break;
+      case '칭찬':
+        categoryMessage = '미루장 앱에 대한 소중한 칭찬을 들려주세요.\n';
+        break;
+      default:
+        categoryMessage = '의견을 말씀해주세요.\n';
     }
-  }
 
-  // 시뮬레이터용 이메일 처리
-  Future<void> _handleSimulatorEmail(String emailBody) async {
-    // 이메일 주소를 클립보드에 복사
-    await Clipboard.setData(const ClipboardData(text: 'gkffhdnls13@gmail.com'));
+    return '''안녕하세요! 미루장 앱 개발팀입니다.
 
-    // 이메일 내용도 클립보드에 복사 (선택사항)
-    await Clipboard.setData(ClipboardData(text: emailBody));
+$categoryMessage
+(의견작성):\n\n
+──────────────────
+──────────────────
 
-    print('시뮬레이터: 이메일 주소와 내용이 클립보드에 복사되었습니다');
+🌐 앱 정보
+$appInfo
+
+📱 기기 정보  
+$deviceInfo
+
+──────────────────
+──────────────────
+
+감사합니다! 💙''';
   }
 
   // 앱 정보 가져오기
-  Future<Map<String, dynamic>> _getAppInfo() async {
-    PackageInfo info = await PackageInfo.fromPlatform();
-    return {"미루장 버전": info.version};
-  }
-
-  // 디바이스 정보 가져오기
-  Future<Map<String, dynamic>> _getDeviceInfo() async {
-    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-
-    if (Platform.isAndroid) {
-      AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      return _readAndroidDeviceInfo(androidInfo);
-    } else if (Platform.isIOS) {
-      IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
-      return _readIosDeviceInfo(iosInfo);
+  Future<String> _getAppInfo() async {
+    try {
+      final packageInfo = await PackageInfo.fromPlatform();
+      return '앱 버전: ${packageInfo.version} +${packageInfo.buildNumber}';
+    } catch (e) {
+      return '앱 정보를 가져올 수 없습니다.';
     }
-
-    return {};
   }
 
-  // Android 디바이스 정보 읽기
-  Map<String, dynamic> _readAndroidDeviceInfo(AndroidDeviceInfo info) {
-    var release = info.version.release;
-    var sdkInt = info.version.sdkInt;
-    var manufacturer = info.manufacturer;
-    var model = info.model;
-
-    return {
-      "OS 버전": "Android $release (SDK $sdkInt)",
-      "기기": "$manufacturer $model",
-    };
-  }
-
-  // iOS 디바이스 정보 읽기
-  Map<String, dynamic> _readIosDeviceInfo(IosDeviceInfo info) {
-    var systemName = info.systemName;
-    var version = info.systemVersion;
-    var model = info.model;
-
-    return {"OS 버전": "$systemName $version", "기기": model};
-  }
-
-  // 이메일 본문 포맷팅
-  String _formatEmailBody(
-    String feedback,
-    String email,
-    Map<String, dynamic> appInfo,
-    Map<String, dynamic> deviceInfo,
-  ) {
-    final buffer = StringBuffer();
-    buffer.writeln('안녕하세요! 미루장 개발자님 👋');
-    buffer.writeln('');
-    buffer.writeln('미루장 앱에 대한 의견을 보내드립니다:');
-    buffer.writeln('');
-    buffer.writeln('📝 의견 내용:');
-    buffer.writeln(feedback);
-    buffer.writeln('');
-
-    if (email.isNotEmpty) {
-      buffer.writeln('📧 답변 받을 이메일: $email');
-      buffer.writeln('');
+  // 기기 정보 가져오기
+  Future<String> _getDeviceInfo() async {
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        return 'Android ${androidInfo.version.release} (API ${androidInfo.version.sdkInt})';
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        return 'iOS ${iosInfo.systemVersion}';
+      }
+      return '기기 정보를 가져올 수 없습니다.';
+    } catch (e) {
+      return '기기 정보를 가져올 수 없습니다.';
     }
-
-    buffer.writeln('==================');
-    buffer.writeln('아래 내용을 함께 보내주세요 (개발자에게 도움이 됩니다)');
-    buffer.writeln('==================');
-    buffer.writeln('');
-
-    // 앱 정보 추가
-    appInfo.forEach((key, value) {
-      buffer.writeln('$key: $value');
-    });
-
-    // 디바이스 정보 추가
-    deviceInfo.forEach((key, value) {
-      buffer.writeln('$key: $value');
-    });
-
-    buffer.writeln('');
-    buffer.writeln('감사합니다! 🙏');
-    buffer.writeln('미루장 사용자');
-
-    return buffer.toString();
   }
 
-  // URL 쿼리 파라미터 인코딩
-  String _encodeQueryParameters(Map<String, String> params) {
-    return params.entries
-        .map(
-          (e) =>
-              '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}',
-        )
-        .join('&');
-  }
-
-  // 이메일 앱 제한 안내 다이얼로그
-  void _showEmailRestrictedDialog(BuildContext context) {
+  // 이메일 전송 에러 다이얼로그
+  void _showEmailErrorDialog(BuildContext context, String error) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         child: Container(
-          width: MediaQuery.of(context).size.width * 0.95, // 화면 가로의 95% 사용
+          width: MediaQuery.of(context).size.width * 0.95,
           decoration: BoxDecoration(
             color: Theme.of(context).brightness == Brightness.dark
                 ? const Color(0xFF1C1C1E)
@@ -1074,7 +1346,7 @@ class _SettingsViewState extends State<SettingsView>
                 padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFFFF9800), Color(0xFFFFB74D)],
+                    colors: [Color(0xFFFF5722), Color(0xFFFF8A65)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -1085,7 +1357,7 @@ class _SettingsViewState extends State<SettingsView>
                 ),
                 child: Column(
                   children: [
-                    // 경고 아이콘
+                    // 에러 아이콘
                     Container(
                       width: 60,
                       height: 60,
@@ -1094,14 +1366,14 @@ class _SettingsViewState extends State<SettingsView>
                         borderRadius: BorderRadius.circular(30),
                       ),
                       child: const Icon(
-                        Icons.warning_rounded,
+                        Icons.error_rounded,
                         color: Colors.white,
                         size: 30,
                       ),
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      '이메일 앱 기능이 제한되었어요! 📧',
+                      '이메일 전송 실패 📧',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -1111,7 +1383,7 @@ class _SettingsViewState extends State<SettingsView>
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      '시뮬레이터에서는 이메일 앱을 사용할 수 없습니다',
+                      '이메일을 전송할 수 없습니다',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.white,
@@ -1128,7 +1400,7 @@ class _SettingsViewState extends State<SettingsView>
                 child: Column(
                   children: [
                     const Text(
-                      '현재 환경에서는 이메일 앱을 열 수 없어서\n이메일 주소를 클립보드에 복사해드렸어요!',
+                      '이메일 앱이 설치되어 있지 않거나\n설정이 필요할 수 있습니다.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 16,
@@ -1136,47 +1408,9 @@ class _SettingsViewState extends State<SettingsView>
                         fontFamily: 'Pretendard',
                       ),
                     ),
-                    const SizedBox(height: 20),
-
-                    // 이메일 주소 표시
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFF9800).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFFFF9800).withOpacity(0.3),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          const Text(
-                            '📧 이메일 주소 (클립보드에 복사됨)',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFFFF9800),
-                              fontFamily: 'Pretendard',
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'gkffhdnls13@gmail.com',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'Pretendard',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
                     const SizedBox(height: 16),
-
                     const Text(
-                      '실제 기기에서는 이메일 앱이 자동으로 열려서\n더 편리하게 의견을 보낼 수 있어요! ✨',
+                      '다음 방법을 시도해보세요:\n• 이메일 앱 설치\n• 이메일 계정 설정\n• 네트워크 연결 확인',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
@@ -1196,12 +1430,9 @@ class _SettingsViewState extends State<SettingsView>
                   width: double.infinity,
                   height: 48,
                   child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _showThankYouDialog(context);
-                    },
+                    onPressed: () => Navigator.of(context).pop(),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF9800),
+                      backgroundColor: const Color(0xFFFF5722),
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shadowColor: Colors.transparent,
