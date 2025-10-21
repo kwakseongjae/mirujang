@@ -556,6 +556,8 @@ class _SettingsViewState extends State<SettingsView>
 
   // 자주 묻는 질문 다이얼로그
   void _showFAQDialog(BuildContext context) {
+    int? expandedIndex;
+
     final List<Map<String, String>> faqs = [
       {
         'question': '미루장이 뭔가요? 어떻게 사용하나요?',
@@ -587,123 +589,138 @@ class _SettingsViewState extends State<SettingsView>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          width: MediaQuery.of(context).size.width * 0.95,
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.85,
-          ),
-          decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFF1C1C1E)
-                : Colors.white,
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 상단 헤더
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF9C27B0), Color(0xFFBA68C8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(24),
-                    topRight: Radius.circular(24),
-                  ),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.95,
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.85,
+            ),
+            decoration: BoxDecoration(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? const Color(0xFF1C1C1E)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
-                child: Column(
-                  children: [
-                    // FAQ 아이콘
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: const Icon(
-                        Icons.help_rounded,
-                        color: Colors.white,
-                        size: 30,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      '자주 묻는 질문 💬',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        fontFamily: 'Pretendard',
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      '미루장 사용법과 궁금한 점들을 확인해보세요',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white,
-                        fontFamily: 'Pretendard',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // FAQ 리스트
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: faqs.length,
-                  itemBuilder: (context, index) {
-                    return _buildFAQItem(faqs[index]);
-                  },
-                ),
-              ),
-
-              // 하단 닫기 버튼
-              Container(
-                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                child: SizedBox(
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 상단 헤더
+                Container(
                   width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF9C27B0),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                  padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF9C27B0), Color(0xFFBA68C8)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    child: const Text(
-                      '확인',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        fontFamily: 'Pretendard',
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(24),
+                      topRight: Radius.circular(24),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      // FAQ 아이콘
+                      Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        child: const Icon(
+                          Icons.help_rounded,
+                          color: Colors.white,
+                          size: 30,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        '자주 묻는 질문 💬',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          fontFamily: 'Pretendard',
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        '미루장 사용법과 궁금한 점들을 확인해보세요',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white,
+                          fontFamily: 'Pretendard',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // FAQ 리스트
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: faqs.length,
+                    itemBuilder: (context, index) {
+                      return _buildFAQItem(
+                        faqs[index],
+                        isLast: index == faqs.length - 1,
+                        isExpanded: expandedIndex == index,
+                        onTap: () {
+                          setState(() {
+                            if (expandedIndex == index) {
+                              expandedIndex = null; // 같은 아이템을 클릭하면 접기
+                            } else {
+                              expandedIndex = index; // 다른 아이템을 클릭하면 펼치기
+                            }
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ),
+
+                // 하단 닫기 버튼
+                Container(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF9C27B0),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        '확인',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Pretendard',
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -711,8 +728,18 @@ class _SettingsViewState extends State<SettingsView>
   }
 
   // FAQ 아이템 위젯
-  Widget _buildFAQItem(Map<String, String> faq) {
-    return _FAQItemWidget(faq: faq);
+  Widget _buildFAQItem(
+    Map<String, String> faq, {
+    bool isLast = false,
+    bool isExpanded = false,
+    VoidCallback? onTap,
+  }) {
+    return _FAQItemWidget(
+      faq: faq,
+      isLast: isLast,
+      isExpanded: isExpanded,
+      onTap: onTap,
+    );
   }
 
   Widget _buildCustomToggle() {
@@ -1605,83 +1632,71 @@ $deviceInfo
 // FAQ 아이템을 위한 별도 StatefulWidget
 class _FAQItemWidget extends StatefulWidget {
   final Map<String, String> faq;
+  final bool isLast;
+  final bool isExpanded;
+  final VoidCallback? onTap;
 
-  const _FAQItemWidget({required this.faq});
+  const _FAQItemWidget({
+    required this.faq,
+    this.isLast = false,
+    this.isExpanded = false,
+    this.onTap,
+  });
 
   @override
   State<_FAQItemWidget> createState() => _FAQItemWidgetState();
 }
 
 class _FAQItemWidgetState extends State<_FAQItemWidget> {
-  bool isExpanded = false;
-
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 1), // 구분선을 위해 마진 최소화
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF2C2C2E)
-            : Colors.grey[50],
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.grey[700]!
-              : Colors.grey[200]!,
-        ),
+        color: isDark ? const Color(0xFF1C1C1E) : Colors.white,
+        border: widget.isLast
+            ? null
+            : Border(
+                bottom: BorderSide(
+                  color: isDark ? Colors.grey[800]! : Colors.grey[200]!,
+                  width: 1,
+                ),
+              ),
       ),
       child: Column(
         children: [
           // 질문 부분
           InkWell(
-            onTap: () {
-              setState(() {
-                isExpanded = !isExpanded;
-              });
-            },
-            borderRadius: BorderRadius.circular(16),
+            onTap: widget.onTap,
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 20),
               child: Row(
                 children: [
-                  // 질문 아이콘
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF9C27B0).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(
-                      Icons.help_outline_rounded,
-                      color: Color(0xFF9C27B0),
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-
                   // 질문 텍스트
                   Expanded(
                     child: Text(
                       widget.faq['question']!,
-                      style: const TextStyle(
-                        fontSize: 15,
+                      style: TextStyle(
+                        fontSize: 16,
                         fontWeight: FontWeight.w600,
                         fontFamily: 'Pretendard',
-                        height: 1.3,
+                        height: 1.4,
+                        color: isDark ? Colors.white : Colors.black87,
                       ),
                     ),
                   ),
 
-                  const SizedBox(width: 16), // 텍스트와 화살표 사이 간격 추가
+                  const SizedBox(width: 16),
                   // 화살표 아이콘
                   AnimatedRotation(
-                    turns: isExpanded ? 0.5 : 0,
+                    turns: widget.isExpanded ? 0.5 : 0,
                     duration: const Duration(milliseconds: 200),
                     child: Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      color: Colors.grey[600],
+                      color: isDark ? Colors.white70 : Colors.black54,
                       size: 24,
                     ),
                   ),
@@ -1694,16 +1709,16 @@ class _FAQItemWidgetState extends State<_FAQItemWidget> {
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
-            child: isExpanded
+            child: widget.isExpanded
                 ? Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.fromLTRB(64, 0, 20, 20),
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
                     child: Text(
                       widget.faq['answer']!,
                       style: TextStyle(
-                        fontSize: 14,
-                        height: 1.5,
-                        color: Colors.grey[700],
+                        fontSize: 15,
+                        height: 1.6,
+                        color: isDark ? Colors.white70 : Colors.black87,
                         fontFamily: 'Pretendard',
                       ),
                     ),
