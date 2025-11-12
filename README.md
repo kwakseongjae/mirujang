@@ -9,10 +9,6 @@
 
 🔗 **앱 다운로드**: [App Store에서 다운로드](https://apps.apple.com/kr/app/%EB%AF%B8%EB%A3%A8%EC%9E%A5-%EA%B0%93%EC%83%9D%EC%9D%84-%EC%9C%84%ED%95%9C-%EB%82%98%EB%A7%8C%EC%9D%98-%EB%AF%B8%EB%A3%A8%EA%B8%B0-%EB%A9%94%EB%AA%A8%EC%9E%A5/id6753706803)
 
-<div align="center">
-  <img src="./assets/images/appstore_qr.png" alt="App Store QR Code" width="200"/>
-</div>
-
 ## 프로젝트 소개
 
 ### 🎯 왜 미루장을 만들었나요?
